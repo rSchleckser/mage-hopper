@@ -1,7 +1,8 @@
-"# Maze Hopper Game Layout"
+## Maze Hopper Game Layout
+
 ![Game Layout](./img/game_layout_wireframe.png)
 
-## `1` Instructions
+## Instructions
 
 ![Control Layout](./img/control_layout_wireframe.png)
 

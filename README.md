@@ -1,2 +1,4 @@
 "# new-game"
-![First Img](./img/Simple%20Lined%20White%20Article%20Page%20Wireframe%20Tablet%20UI%20Prototype.png)
+![Game Layout](./img/game_layout_wireframe.png)
+
+![Control Layout](./img/control_layout_wireframe.png)

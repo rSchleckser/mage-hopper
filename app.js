@@ -26,9 +26,9 @@ function preload() {
 
 function create() {
   this.add.image(1000, 400, 'background');
-  platforms = createPlatform(this, 150, 600, 200, 50);
 
   //first stage
+  createPlatform(this, 150, 600, 200, 50);
   createPlatform(this, 550, 600, 200, 50);
   createPlatform(this, 950, 600, 200, 50);
   createPlatform(this, 1350, 600, 200, 50);
@@ -44,6 +44,12 @@ function create() {
   createPlatform(this, 550, 200, 200, 50);
   createPlatform(this, 950, 200, 200, 50);
   createPlatform(this, 1350, 200, 200, 50);
+
+  //level indicator
+  levelIndicator = this.add.text(16, 16, 'Level: 1', {
+    fontSize: '32px',
+    fill: '#000',
+  });
 }
 
 //creates uniform style platforms

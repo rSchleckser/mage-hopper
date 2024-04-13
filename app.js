@@ -6,7 +6,7 @@ const config = {
     default: 'arcade',
     arcade: {
       gravity: { y: 300 }, // Set gravity
-      debug: true, // Set to true to see physics bodies
+      debug: false, // Set to true to see physics bodies
     },
   },
   scene: {
@@ -17,6 +17,7 @@ const config = {
 };
 
 let player;
+let enemy;
 let ground;
 let platforms;
 let door;
@@ -33,16 +34,34 @@ function preload() {
 
   // Load player image
   this.load.image('player', './Mage/mage.png');
+  //Load Enemy
+  this.load.spritesheet('enemy', './Knight/knight.png', {
+    frameWidth: 322,
+    frameHeight: 322,
+  });
 
   // Load running animation frames
   for (let i = 1; i <= 8; i++) {
     this.load.image('run' + i, './Mage/Run/run' + i + '.png');
   }
 
+  for (let i = 1; i <= 8; i++) {
+    this.load.image('enemyRight' + i, './Knight/Run/run' + i + '.png');
+  }
+
   // Load jumping animation frames
   for (let i = 1; i <= 7; i++) {
     this.load.image('jump' + i, './Mage/Jump/jump' + i + '.png');
   }
+
+  //load attack animation frames
+  // for (let i = 1; i <= 7; i++) {
+  //   this.load.image('attack' + i, './Mage/Attack/attack' + i + '.png');
+  // }
+  this.load.spritesheet('attack', './Mage/new2.png', {
+    frameWidth: 71,
+    frameHeight: 83,
+  });
 }
 
 function create() {
@@ -82,7 +101,7 @@ function create() {
   }
 
   //third stage
-  // second stage
+
   for (let i = 0; i < 4; i++) {
     platforms
       .create(150 + 500 * i, 350, 'platform')
@@ -99,24 +118,35 @@ function create() {
 
   //create player
   player = this.physics.add.sprite(150, 700, 'player').setScale(1.5);
-  player.setBounce(0.2);
+  player.setBounce(0.1);
   player.setCollideWorldBounds(true);
 
   //fix player collision-box origin and size
-
   player.body.setSize(player.width * 0.43, player.height * 0.45);
   player.body.setOffset(player.width * 0.15, player.height * 0.43);
+
+  //create enemy
+  enemy = this.physics.add.sprite(850, 450, 'enemy').setScale(1.5);
+  //fix enemy collision-box origin and size
+  enemy.body.setSize(enemy.width * 0.43, enemy.height * 0.45);
+  enemy.body.setOffset(enemy.width * 0.15, enemy.height * 0.43);
 
   // Set up running animation frames
   let runFrames = [];
   for (let i = 1; i <= 8; i++) {
     runFrames.push({ key: 'run' + i });
   }
+
   //set up jumping animation frames
   let jumpFrames = [];
   for (let i = 1; i <= 7; i++) {
     jumpFrames.push({ key: 'jump' + i });
   }
+  //set up attack animation frames
+  // let attackFrames = [];
+  // for (let i = 1; i <= 7; i++) {
+  //   attackFrames.push({ key: 'attack' + i });
+  // }
 
   // Create the 'left' animation
   this.anims.create({
@@ -137,7 +167,7 @@ function create() {
   //base animation
   this.anims.create({
     key: 'turn',
-    frames: [{ key: 'player', frame: 0 }],
+    frames: [{ key: 'player' }],
     frameRate: 10,
   });
 
@@ -151,14 +181,21 @@ function create() {
 
   //jump animation
   this.anims.create({
-    key: 'jump',
+    key: 'j',
     frames: jumpFrames,
-    frameRate: 10,
-    repeat: -1,
+    frameRate: 4,
+  });
+
+  //attack animation
+  this.anims.create({
+    key: 'attack',
+    frames: this.anims.generateFrameNumbers('attack', { start: 0, end: 5 }),
+    frameRate: 4,
   });
 
   //add collision between objects in the game
   this.physics.add.collider(player, platforms);
+  this.physics.add.collider(enemy, platforms);
   this.physics.add.collider(key, platforms);
   this.physics.add.collider(key, ground);
   this.physics.add.collider(door, platforms);
@@ -177,21 +214,40 @@ function create() {
 
   function enterDoor(player, door) {
     if (collectedKey === true) {
-      door.destroy();
+      // Create a fade-out effect
+      this.cameras.main.fadeOut(500); // 500 milliseconds fade-out time
+
+      // Wait for the fade-out to complete before destroying the door
+      this.time.delayedCall(
+        1000,
+        function () {
+          door.destroy();
+        },
+        [],
+        this
+      );
     }
   }
+
+  //key commands
+  wKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W);
+  sKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S);
+  aKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A);
+  dKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D);
+  spaceBar = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+  fKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F);
 }
 
 function update() {
   cursors = this.input.keyboard.createCursorKeys();
 
-  if (cursors.left.isDown) {
+  if (cursors.left.isDown || aKey.isDown) {
     player.setVelocityX(-160);
     player.anims.play('left', true);
     player.setFlipX(true); // Flip the player when moving left
     player.body.setSize(player.width * 0.43, player.height * 0.45);
     player.body.setOffset(player.width * 0.42, player.height * 0.43);
-  } else if (cursors.right.isDown) {
+  } else if (cursors.right.isDown || dKey.isDown) {
     player.setVelocityX(160);
     player.anims.play('right', true);
     player.setFlipX(false); // Reset flip when moving right
@@ -202,11 +258,18 @@ function update() {
     player.anims.play('turn');
   }
 
-  if (cursors.up.isDown && player.body.touching.down) {
+  if (
+    (cursors.up.isDown && player.body.touching.down) ||
+    (wKey.isDown && player.body.touching.down)
+  ) {
     player.setVelocityY(-350);
   }
 
   if (!player.body.touching.down) {
-    player.anims.play('jump');
+    player.anims.play('j');
+  }
+
+  if (fKey.isDown) {
+    player.anims.play('attack');
   }
 }

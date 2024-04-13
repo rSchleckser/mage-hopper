@@ -6,7 +6,7 @@ const config = {
     default: 'arcade',
     arcade: {
       gravity: { y: 300 }, // Set gravity
-      debug: false, // Set to true to see physics bodies
+      debug: true, // Set to true to see physics bodies
     },
   },
   scene: {
@@ -16,12 +16,18 @@ const config = {
   },
 };
 
+let player;
+let ground;
 let platforms;
+let key;
+let collectedKey = false;
 
 const game = new Phaser.Game(config);
 
 function preload() {
   this.load.image('background', './img/nature_background.jpg');
+  this.load.image('platform', './img/grass_platform.png');
+  this.load.image('key', './img/key.png');
 
   // Load player image
   this.load.image('player', './Mage/mage.png');
@@ -40,27 +46,44 @@ function preload() {
 function create() {
   this.add.image(1000, 400, 'background');
 
-  // platforms = this.physics.add.staticGroup();
-  // let platform = platforms.create(150, 625, 'platform');
-  // platform.setDisplaySize(200, 50);
+  //add key
+  key = this.physics.add.sprite(170, 275, 'key').setScale(0.2);
+  key.body.setSize(key.width * 0.7, key.height * 1);
+  key.body.setOffset(key.width * 0.15, key.height * 0.2);
 
-  //first stage
-  createPlatform(this, 150, 600, 200, 50);
-  createPlatform(this, 550, 600, 200, 50);
-  createPlatform(this, 950, 600, 200, 50);
-  createPlatform(this, 1350, 600, 200, 50);
+  platforms = this.physics.add.staticGroup();
 
-  //second stage
-  createPlatform(this, 350, 400, 200, 50);
-  createPlatform(this, 750, 400, 200, 50);
-  createPlatform(this, 1150, 400, 200, 50);
-  createPlatform(this, 1550, 400, 200, 50);
+  //ground level
+  ground = platforms.create(950, 990).refreshBody();
+  ground.body.setSize(1900, 240);
+
+  // first stage
+  for (let i = 1; i < 3; i++) {
+    platforms
+      .create(150 + 500 * i, 720, 'platform')
+      .setScale(0.25)
+      .refreshBody()
+      .setSize(1000 * 0.25, 40 * 0.25);
+  }
+
+  // second stage
+  for (let i = 0; i < 3; i++) {
+    platforms
+      .create(350 + 500 * i, 550, 'platform')
+      .setScale(0.25)
+      .refreshBody()
+      .setSize(1000 * 0.25, 40 * 0.25);
+  }
 
   //third stage
-  createPlatform(this, 150, 200, 200, 50);
-  createPlatform(this, 550, 200, 200, 50);
-  createPlatform(this, 950, 200, 200, 50);
-  createPlatform(this, 1350, 200, 200, 50);
+  // second stage
+  for (let i = 0; i < 4; i++) {
+    platforms
+      .create(150 + 500 * i, 350, 'platform')
+      .setScale(0.25)
+      .refreshBody()
+      .setSize(1000 * 0.25, 40 * 0.25);
+  }
 
   //level indicator
   levelIndicator = this.add.text(16, 16, 'Level: 1', {
@@ -70,9 +93,13 @@ function create() {
 
   //create player
   player = this.physics.add.sprite(150, 700, 'player').setScale(1.5);
-
   player.setBounce(0.2);
   player.setCollideWorldBounds(true);
+
+  //fix player collision-box origin and size
+
+  player.body.setSize(player.width * 0.43, player.height * 0.45);
+  player.body.setOffset(player.width * 0.15, player.height * 0.43);
 
   // Set up running animation frames
   let runFrames = [];
@@ -124,26 +151,20 @@ function create() {
     repeat: -1,
   });
 
-  console.log(jumpFrames);
-}
+  //add collision between objects in the game
+  this.physics.add.collider(player, platforms);
+  this.physics.add.collider(key, platforms);
+  this.physics.add.collider(key, ground);
 
-//creates uniform style platforms
-// function createPlatform(scene, x, y, width, height) {
-//   platforms = scene.add.graphics();
-//   platforms.fillStyle(0x00ff00);
-//   platforms.fillRect(x, y, width, height);
-//   platforms.lineStyle(4, 0x000000);
-//   platforms.strokeRect(x, y, width, height);
-// }
+  //collect the key and player overlap
+  this.physics.add.overlap(player, key, collectKey, null, this);
 
-function createPlatform(scene, x, y, width, height) {
-  let platform = scene.physics.add.staticSprite(x, y, null, width, height);
-  platform.setOrigin(0); // Set origin to top-left corner
-  platform.setDisplaySize(width, height);
-  platform.setTint(0x00ff00);
-  platform.body.setSize(width, height);
-  platform.body.setOffset(0, 0);
-  return platform;
+  function collectKey(player, key) {
+    // Remove the key sprite from the scene
+    collectedKey = true;
+    console.log(collectKey);
+    key.destroy();
+  }
 }
 
 function update() {
@@ -153,17 +174,24 @@ function update() {
     player.setVelocityX(-160);
     player.anims.play('left', true);
     player.setFlipX(true); // Flip the player when moving left
+    player.body.setSize(player.width * 0.43, player.height * 0.45);
+    player.body.setOffset(player.width * 0.42, player.height * 0.43);
   } else if (cursors.right.isDown) {
     player.setVelocityX(160);
     player.anims.play('right', true);
     player.setFlipX(false); // Reset flip when moving right
+    player.body.setSize(player.width * 0.43, player.height * 0.45);
+    player.body.setOffset(player.width * 0.15, player.height * 0.43);
   } else {
     player.setVelocityX(0);
     player.anims.play('turn');
   }
 
   if (cursors.up.isDown && player.body.touching.down) {
-    player.setVelocityY(-330);
+    player.setVelocityY(-350);
+  }
+
+  if (!player.body.touching.down) {
     player.anims.play('jump');
   }
 }

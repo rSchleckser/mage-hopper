@@ -19,6 +19,9 @@ const config = {
 let player;
 let lives;
 let enemy;
+let enemy2;
+let enemy3;
+const enemySpeed = 100;
 let jumpFrames;
 let ground;
 let platforms;
@@ -132,6 +135,18 @@ function create() {
   enemy.body.setSize(enemy.width * 0.43, enemy.height * 0.45);
   enemy.body.setOffset(enemy.width * 0.15, enemy.height * 0.43);
 
+  enemy2 = this.physics.add.sprite(1150, 272, 'enemy').setScale(1.5);
+  enemy2.setCollideWorldBounds(true);
+  //fix enemy collision-box origin and size
+  enemy2.body.setSize(enemy.width * 0.43, enemy.height * 0.45);
+  enemy2.body.setOffset(enemy.width * 0.15, enemy.height * 0.43);
+
+  enemy3 = this.physics.add.sprite(150, 272, 'enemy').setScale(1.5);
+  enemy3.setCollideWorldBounds(true);
+  //fix enemy collision-box origin and size
+  enemy3.body.setSize(enemy.width * 0.43, enemy.height * 0.45);
+  enemy3.body.setOffset(enemy.width * 0.15, enemy.height * 0.43);
+
   // Set up running animation frames
   let runFrames = [];
   for (let i = 1; i <= 8; i++) {
@@ -243,6 +258,8 @@ function create() {
   //add collision between objects in the game
   this.physics.add.collider(player, platforms);
   this.physics.add.collider(enemy, platforms);
+  this.physics.add.collider(enemy2, platforms);
+  this.physics.add.collider(enemy3, platforms);
   this.physics.add.collider(key, platforms);
   this.physics.add.collider(key, ground);
   this.physics.add.collider(door, platforms);
@@ -251,16 +268,16 @@ function create() {
     player.disableBody(true, true);
   }
 
-  function respawnPlayer() {
-    //create player
-    player = this.physics.add.sprite(150, 700, 'player').setScale(1.5);
-    player.setBounce(0.1);
-    player.setCollideWorldBounds(true);
+  // function respawnPlayer() {
+  //   //create player
+  //   player = this.physics.add.sprite(150, 700, 'player').setScale(1.5);
+  //   player.setBounce(0.1);
+  //   player.setCollideWorldBounds(true);
 
-    //fix player collision-box origin and size
-    player.body.setSize(player.width * 0.43, player.height * 0.45);
-    player.body.setOffset(player.width * 0.15, player.height * 0.43);
-  }
+  //   //fix player collision-box origin and size
+  //   player.body.setSize(player.width * 0.43, player.height * 0.45);
+  //   player.body.setOffset(player.width * 0.15, player.height * 0.43);
+  // }
 
   function collectKey(player, key) {
     // Remove the key sprite from the scene
@@ -287,7 +304,8 @@ function create() {
   }
 
   //PLayers dies
-  this.physics.add.overlap(player, enemy, playerDies, null, this);
+  this.physics.add.collider(player, enemy, playerDies, null, this);
+
   //collect the key and player overlap
   this.physics.add.overlap(player, key, collectKey, null, this);
   //player enters the door with key
@@ -340,33 +358,44 @@ function update() {
     player.anims.play('jump', true);
   }
 
-  // enemy animation for following th player on the x-axis
-  if (player.body.y < enemy.body.y && enemy.body.touching.down) {
-    this.time.delayedCall(
-      750,
-      function () {
-        enemy.setVelocityY(-350);
-      },
-      [],
-      this
-    );
+  //function for all enemies
+
+  function enemyFollows(enemy, scene) {
+    // Enemy animation for following the player on the y-axis
+    if (player.body.y < enemy.body.y && enemy.body.touching.down) {
+      scene.time.delayedCall(
+        550,
+        function () {
+          enemy.setVelocityY(-350);
+        },
+        [],
+        scene
+      );
+    }
+
+    // Enemy animation for following the player on the x-axis
+    if (player.body.x < enemy.body.x && player.body.x + enemy.body.x > 50) {
+      enemy.setVelocityX(-enemySpeed);
+      enemy.anims.play('enemyRunLeft', true);
+      enemy.setFlipX(true); // Flip the enemy when moving left
+      enemy.body.setSize(enemy.width * 0.43, enemy.height * 0.45);
+      enemy.body.setOffset(enemy.width * 0.42, enemy.height * 0.43);
+    } else if (
+      player.body.x > enemy.body.x &&
+      enemy.body.x - player.body.x < -50
+    ) {
+      enemy.setVelocityX(enemySpeed);
+      enemy.anims.play('enemyRunRight', true);
+      enemy.setFlipX(false); // Flip the enemy when moving left
+      enemy.body.setSize(enemy.width * 0.43, enemy.height * 0.45);
+      enemy.body.setOffset(enemy.width * 0.15, enemy.height * 0.43);
+    }
   }
-  if (player.body.x < enemy.body.x && player.body.x + enemy.body.x > 50) {
-    enemy.setVelocityX(-90);
-    enemy.anims.play('enemyRunLeft', true);
-    enemy.setFlipX(true); // Flip the player when moving left
-    enemy.body.setSize(enemy.width * 0.43, enemy.height * 0.45);
-    enemy.body.setOffset(enemy.width * 0.42, enemy.height * 0.43);
-  } else if (
-    player.body.x > enemy.body.x &&
-    enemy.body.x - player.body.x < -50
-  ) {
-    enemy.setVelocityX(90);
-    enemy.anims.play('enemyRunRight', true);
-    enemy.setFlipX(false); // Flip the enemy when moving left
-    enemy.body.setSize(enemy.width * 0.43, enemy.height * 0.45);
-    enemy.body.setOffset(enemy.width * 0.15, enemy.height * 0.43);
-  }
+
+  // Call the function for each enemy
+  enemyFollows(enemy, this);
+  enemyFollows(enemy2, this);
+  enemyFollows(enemy3, this);
 
   if (fKey.isDown) {
     player.anims.play('attack', true);

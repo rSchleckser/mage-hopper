@@ -202,7 +202,15 @@ function create() {
   //jump animation
   this.anims.create({
     key: 'jump',
-    frames: jumpFrames,
+    frames: [jumpFrames[1]],
+    frameRate: 4,
+    repeat: -1,
+  });
+
+  //fall animation
+  this.anims.create({
+    key: 'fall',
+    frames: [jumpFrames[5]],
     frameRate: 4,
     repeat: -1,
   });
@@ -280,24 +288,30 @@ function update() {
     player.anims.play('turn');
   }
 
-  if (enemy.body.touching.down) {
-    // enemy animation
-    enemy.setVelocityX(160);
-    enemy.anims.play('runRight', true);
+  // modified jumping animation to check for rising and falling condition
+  if (!player.body.touching.down && !(player.body.velocity.y > 0)) {
+    player.anims.play('jump', true);
   }
-  enemy.setVelocityX(0);
-  enemy.anims.play('enemyTurn');
+  if (!player.body.touching.down && player.body.velocity.y > 0) {
+    player.anims.play('fall', true);
+  }
 
+  // player jump animation
   if (
     (cursors.up.isDown && player.body.touching.down) ||
     (wKey.isDown && player.body.touching.down)
   ) {
     player.setVelocityY(-350);
-  }
-
-  if (!player.body.touching.down) {
     player.anims.play('jump');
   }
+
+  //enemy moving right
+  if (enemy.body.touching.down) {
+    // enemy animation
+    enemy.setVelocityX(160);
+  }
+  enemy.setVelocityX(0);
+  enemy.anims.play('enemyTurn');
 
   if (fKey.isDown) {
     player.anims.play('attack');

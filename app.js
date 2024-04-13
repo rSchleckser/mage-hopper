@@ -161,6 +161,13 @@ function create() {
     repeat: -1,
   });
 
+  // enemy base animation
+  this.anims.create({
+    key: 'enemyTurn',
+    frames: [{ key: 'enemy' }],
+    frameRate: 10,
+  });
+
   // Create the 'left' animation
   this.anims.create({
     key: 'left',
@@ -262,17 +269,24 @@ function update() {
     player.body.setSize(player.width * 0.43, player.height * 0.45);
     player.body.setOffset(player.width * 0.42, player.height * 0.43);
   } else if (cursors.right.isDown || dKey.isDown) {
+    //player animation
     player.setVelocityX(160);
-    enemy.setVelocityX(160);
     player.anims.play('right', true);
     player.setFlipX(false); // Reset flip when moving right
     player.body.setSize(player.width * 0.43, player.height * 0.45);
     player.body.setOffset(player.width * 0.15, player.height * 0.43);
-    enemy.anims.play('runRight');
   } else {
     player.setVelocityX(0);
     player.anims.play('turn');
   }
+
+  if (enemy.body.touching.down) {
+    // enemy animation
+    enemy.setVelocityX(160);
+    enemy.anims.play('runRight', true);
+  }
+  enemy.setVelocityX(0);
+  enemy.anims.play('enemyTurn');
 
   if (
     (cursors.up.isDown && player.body.touching.down) ||

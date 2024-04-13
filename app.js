@@ -6,7 +6,7 @@ const config = {
     default: 'arcade',
     arcade: {
       gravity: { y: 300 }, // Set gravity
-      debug: true, // Set to true to see physics bodies
+      debug: false, // Set to true to see physics bodies
     },
   },
   scene: {
@@ -17,6 +17,7 @@ const config = {
 };
 
 let player;
+let lives;
 let enemy;
 let jumpFrames;
 let ground;
@@ -66,7 +67,8 @@ function create() {
   this.add.image(1000, 400, 'background');
 
   //add key
-  key = this.physics.add.sprite(170, 275, 'key').setScale(0.2);
+  key = this.physics.add.sprite(170, 265, 'key').setScale(0.2);
+  key.setBounce(1.0);
   key.body.setSize(key.width * 0.7, key.height * 1);
   key.body.setOffset(key.width * 0.15, key.height * 0.2);
 
@@ -229,15 +231,19 @@ function create() {
   this.physics.add.collider(key, ground);
   this.physics.add.collider(door, platforms);
 
-  //PLayers dies
-  this.physics.add.overlap(player, enemy, playerDies, null, this);
-  //collect the key and player overlap
-  this.physics.add.overlap(player, key, collectKey, null, this);
-  //player enters the door with key
-  this.physics.add.overlap(player, door, enterDoor, null, this);
-
   function playerDies(player, enemy) {
     player.disableBody(true, true);
+  }
+
+  function respawnPlayer() {
+    //create player
+    player = this.physics.add.sprite(150, 700, 'player').setScale(1.5);
+    player.setBounce(0.1);
+    player.setCollideWorldBounds(true);
+
+    //fix player collision-box origin and size
+    player.body.setSize(player.width * 0.43, player.height * 0.45);
+    player.body.setOffset(player.width * 0.15, player.height * 0.43);
   }
 
   function collectKey(player, key) {
@@ -263,6 +269,13 @@ function create() {
       );
     }
   }
+
+  //PLayers dies
+  this.physics.add.overlap(player, enemy, playerDies, null, this);
+  //collect the key and player overlap
+  this.physics.add.overlap(player, key, collectKey, null, this);
+  //player enters the door with key
+  this.physics.add.overlap(player, door, enterDoor, null, this);
 
   //key commands
   wKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W);

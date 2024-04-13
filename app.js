@@ -19,6 +19,7 @@ const config = {
 let player;
 let ground;
 let platforms;
+let door;
 let key;
 let collectedKey = false;
 
@@ -28,6 +29,7 @@ function preload() {
   this.load.image('background', './img/nature_background.jpg');
   this.load.image('platform', './img/grass_platform.png');
   this.load.image('key', './img/key.png');
+  this.load.image('door', './img/door.png');
 
   // Load player image
   this.load.image('player', './Mage/mage.png');
@@ -50,6 +52,10 @@ function create() {
   key = this.physics.add.sprite(170, 275, 'key').setScale(0.2);
   key.body.setSize(key.width * 0.7, key.height * 1);
   key.body.setOffset(key.width * 0.15, key.height * 0.2);
+
+  //add door
+  door = this.physics.add.sprite(1650, 253, 'door').setScale(0.1);
+  door.body.setSize(door.width * 0.5, door.height * 0.9);
 
   platforms = this.physics.add.staticGroup();
 
@@ -155,15 +161,24 @@ function create() {
   this.physics.add.collider(player, platforms);
   this.physics.add.collider(key, platforms);
   this.physics.add.collider(key, ground);
+  this.physics.add.collider(door, platforms);
 
   //collect the key and player overlap
   this.physics.add.overlap(player, key, collectKey, null, this);
+  //player enters the door with key
+  this.physics.add.overlap(player, door, enterDoor, null, this);
 
   function collectKey(player, key) {
     // Remove the key sprite from the scene
     collectedKey = true;
-    console.log(collectKey);
+    console.log(collectedKey);
     key.destroy();
+  }
+
+  function enterDoor(player, door) {
+    if (collectedKey === true) {
+      door.destroy();
+    }
   }
 }
 

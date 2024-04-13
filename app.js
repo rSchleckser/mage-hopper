@@ -6,7 +6,7 @@ const config = {
     default: 'arcade',
     arcade: {
       gravity: { y: 300 }, // Set gravity
-      debug: false, // Set to true to see physics bodies
+      debug: true, // Set to true to see physics bodies
     },
   },
   scene: {
@@ -18,6 +18,7 @@ const config = {
 
 let player;
 let enemy;
+let jumpFrames;
 let ground;
 let platforms;
 let door;
@@ -35,10 +36,7 @@ function preload() {
   // Load player image
   this.load.image('player', './Mage/mage.png');
   //Load Enemy
-  this.load.spritesheet('enemy', './Knight/knight.png', {
-    frameWidth: 322,
-    frameHeight: 322,
-  });
+  this.load.image('enemy', './Knight/knight.png');
 
   // Load running animation frames
   for (let i = 1; i <= 8; i++) {
@@ -46,7 +44,7 @@ function preload() {
   }
 
   for (let i = 1; i <= 8; i++) {
-    this.load.image('enemyRight' + i, './Knight/Run/run' + i + '.png');
+    this.load.image('enemyRun' + i, './Knight/Run/run' + i + '.png');
   }
 
   // Load jumping animation frames
@@ -127,6 +125,7 @@ function create() {
 
   //create enemy
   enemy = this.physics.add.sprite(850, 450, 'enemy').setScale(1.5);
+  enemy.setCollideWorldBounds(true);
   //fix enemy collision-box origin and size
   enemy.body.setSize(enemy.width * 0.43, enemy.height * 0.45);
   enemy.body.setOffset(enemy.width * 0.15, enemy.height * 0.43);
@@ -137,8 +136,14 @@ function create() {
     runFrames.push({ key: 'run' + i });
   }
 
+  //let enemy run animation frame
+  let enemyRunFrames = [];
+  for (let i = 1; i <= 8; i++) {
+    enemyRunFrames.push({ key: 'enemyRun' + i });
+  }
+
   //set up jumping animation frames
-  let jumpFrames = [];
+  jumpFrames = [];
   for (let i = 1; i <= 7; i++) {
     jumpFrames.push({ key: 'jump' + i });
   }
@@ -147,6 +152,14 @@ function create() {
   // for (let i = 1; i <= 7; i++) {
   //   attackFrames.push({ key: 'attack' + i });
   // }
+
+  //create the enemy runing animation
+  this.anims.create({
+    key: 'runRight',
+    frames: enemyRunFrames,
+    frameRate: 10,
+    repeat: -1,
+  });
 
   // Create the 'left' animation
   this.anims.create({
@@ -181,9 +194,10 @@ function create() {
 
   //jump animation
   this.anims.create({
-    key: 'j',
+    key: 'jump',
     frames: jumpFrames,
     frameRate: 4,
+    repeat: -1,
   });
 
   //attack animation
@@ -249,10 +263,12 @@ function update() {
     player.body.setOffset(player.width * 0.42, player.height * 0.43);
   } else if (cursors.right.isDown || dKey.isDown) {
     player.setVelocityX(160);
+    enemy.setVelocityX(160);
     player.anims.play('right', true);
     player.setFlipX(false); // Reset flip when moving right
     player.body.setSize(player.width * 0.43, player.height * 0.45);
     player.body.setOffset(player.width * 0.15, player.height * 0.43);
+    enemy.anims.play('runRight');
   } else {
     player.setVelocityX(0);
     player.anims.play('turn');
@@ -266,7 +282,7 @@ function update() {
   }
 
   if (!player.body.touching.down) {
-    player.anims.play('j');
+    player.anims.play('jump');
   }
 
   if (fKey.isDown) {

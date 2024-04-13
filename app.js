@@ -341,6 +341,16 @@ function update() {
   }
 
   // enemy animation for following th player on the x-axis
+  if (player.body.y < enemy.body.y && enemy.body.touching.down) {
+    this.time.delayedCall(
+      750,
+      function () {
+        enemy.setVelocityY(-350);
+      },
+      [],
+      this
+    );
+  }
   if (player.body.x < enemy.body.x && player.body.x + enemy.body.x > 50) {
     enemy.setVelocityX(-90);
     enemy.anims.play('enemyRunLeft', true);

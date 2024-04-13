@@ -130,60 +130,6 @@ function create() {
   enemy.body.setSize(enemy.width * 0.43, enemy.height * 0.45);
   enemy.body.setOffset(enemy.width * 0.15, enemy.height * 0.43);
 
-  //
-
-  //add collision between objects in the game
-  this.physics.add.collider(player, platforms);
-  this.physics.add.collider(enemy, platforms);
-  this.physics.add.collider(key, platforms);
-  this.physics.add.collider(key, ground);
-  this.physics.add.collider(door, platforms);
-
-  //PLayers dies
-  this.physics.add.overlap(player, enemy, playerDies, null, this);
-  //collect the key and player overlap
-  this.physics.add.overlap(player, key, collectKey, null, this);
-  //player enters the door with key
-  this.physics.add.overlap(player, door, enterDoor, null, this);
-
-  function playerDies(player, enemy) {
-    player.disableBody(true, true);
-  }
-
-  function collectKey(player, key) {
-    // Remove the key sprite from the scene
-    collectedKey = true;
-    console.log(collectedKey);
-    key.destroy();
-  }
-
-  function enterDoor(player, door) {
-    if (collectedKey === true) {
-      // Create a fade-out effect
-      this.cameras.main.fadeOut(500); // 500 milliseconds fade-out time
-
-      // Wait for the fade-out to complete before destroying the door
-      this.time.delayedCall(
-        1000,
-        function () {
-          door.destroy();
-        },
-        [],
-        this
-      );
-    }
-  }
-
-  //key commands
-  wKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W);
-  sKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S);
-  aKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A);
-  dKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D);
-  spaceBar = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
-  fKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F);
-}
-
-function update() {
   // Set up running animation frames
   let runFrames = [];
   for (let i = 1; i <= 8; i++) {
@@ -275,6 +221,59 @@ function update() {
     frames: this.anims.generateFrameNumbers('attack', { start: 0, end: 5 }),
     frameRate: 4,
   });
+
+  //add collision between objects in the game
+  this.physics.add.collider(player, platforms);
+  this.physics.add.collider(enemy, platforms);
+  this.physics.add.collider(key, platforms);
+  this.physics.add.collider(key, ground);
+  this.physics.add.collider(door, platforms);
+
+  //PLayers dies
+  this.physics.add.overlap(player, enemy, playerDies, null, this);
+  //collect the key and player overlap
+  this.physics.add.overlap(player, key, collectKey, null, this);
+  //player enters the door with key
+  this.physics.add.overlap(player, door, enterDoor, null, this);
+
+  function playerDies(player, enemy) {
+    player.disableBody(true, true);
+  }
+
+  function collectKey(player, key) {
+    // Remove the key sprite from the scene
+    collectedKey = true;
+    console.log(collectedKey);
+    key.destroy();
+  }
+
+  function enterDoor(player, door) {
+    if (collectedKey === true) {
+      // Create a fade-out effect
+      this.cameras.main.fadeOut(500); // 500 milliseconds fade-out time
+
+      // Wait for the fade-out to complete before destroying the door
+      this.time.delayedCall(
+        1000,
+        function () {
+          door.destroy();
+        },
+        [],
+        this
+      );
+    }
+  }
+
+  //key commands
+  wKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W);
+  sKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S);
+  aKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A);
+  dKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D);
+  spaceBar = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+  fKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F);
+}
+
+function update() {
   cursors = this.input.keyboard.createCursorKeys();
 
   if (cursors.left.isDown || aKey.isDown) {

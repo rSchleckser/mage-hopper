@@ -6,7 +6,7 @@ const config = {
     default: 'arcade',
     arcade: {
       gravity: { y: 300 }, // Set gravity
-      debug: false, // Set to true to see physics bodies
+      debug: true, // Set to true to see physics bodies
     },
   },
   scene: {
@@ -57,7 +57,7 @@ function preload() {
   // for (let i = 1; i <= 7; i++) {
   //   this.load.image('attack' + i, './Mage/Attack/attack' + i + '.png');
   // }
-  this.load.spritesheet('attack', './Mage/new2.png', {
+  this.load.spritesheet('attack', './Mage/new.png', {
     frameWidth: 71,
     frameHeight: 83,
   });
@@ -155,12 +155,28 @@ function create() {
   //   attackFrames.push({ key: 'attack' + i });
   // }
 
-  //create the enemy runing animation
+  //create the enemy runing right animation
   this.anims.create({
-    key: 'runRight',
+    key: 'enemyRunRight',
     frames: enemyRunFrames,
     frameRate: 10,
     repeat: -1,
+  });
+
+  //create the enemy runing left animation
+  this.anims.create({
+    key: 'enemyRunLeft',
+    frames: enemyRunFrames,
+    frameRate: 10,
+    repeat: -1,
+    // Set flipX to true when playing the 'left' animation
+    onStart: function () {
+      enemy.setFlipX(true);
+    },
+    // Reset flipX to false when the 'left' animation ends
+    onComplete: function () {
+      enemy.setFlipX(false);
+    },
   });
 
   // enemy base animation
@@ -321,18 +337,38 @@ function update() {
     (wKey.isDown && player.body.touching.down)
   ) {
     player.setVelocityY(-350);
-    player.anims.play('jump');
+    player.anims.play('jump', true);
   }
 
-  //enemy moving right
-  if (enemy.body.touching.down) {
-    // enemy animation
-    enemy.setVelocityX(160);
+  // enemy animation for following th player on the x-axis
+  if (enemy.body.x - player.body.x < 50) {
+    enemy.setVelocityX(0);
+    enemy.anims.play('enemyTurn');
+  } else if (
+    player.body.x < enemy.body.x &&
+    player.body.x + enemy.body.x > 100
+  ) {
+    enemy.setVelocityX(-90);
+    enemy.anims.play('enemyRunLeft', true);
+    enemy.setFlipX(true); // Flip the player when moving left
+    enemy.body.setSize(enemy.width * 0.43, enemy.height * 0.45);
+    enemy.body.setOffset(enemy.width * 0.42, enemy.height * 0.43);
+  } else if (
+    player.body.x > enemy.body.x &&
+    parseInt(enemy.body.x - player.body.x) < -100
+  ) {
+    enemy.setVelocityX(90);
+    enemy.anims.play('enemyRunRight', true);
+    enemy.setFlipX(false); // Flip the enemy when moving left
+    enemy.body.setSize(enemy.width * 0.43, enemy.height * 0.45);
+    enemy.body.setOffset(enemy.width * 0.15, enemy.height * 0.43);
   }
-  enemy.setVelocityX(0);
-  enemy.anims.play('enemyTurn');
 
   if (fKey.isDown) {
-    player.anims.play('attack');
+    player.anims.play('attack', true);
   }
+
+  // console.log('player: ' + player.body.x);
+  // console.log('enemy: ' + enemy.body.x);
+  // console.log('total: ' + parseFloat(enemy.body.x - player.body.x));
 }

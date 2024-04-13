@@ -341,13 +341,7 @@ function update() {
   }
 
   // enemy animation for following th player on the x-axis
-  if (enemy.body.x - player.body.x < 50) {
-    enemy.setVelocityX(0);
-    enemy.anims.play('enemyTurn');
-  } else if (
-    player.body.x < enemy.body.x &&
-    player.body.x + enemy.body.x > 100
-  ) {
+  if (player.body.x < enemy.body.x && player.body.x + enemy.body.x > 50) {
     enemy.setVelocityX(-90);
     enemy.anims.play('enemyRunLeft', true);
     enemy.setFlipX(true); // Flip the player when moving left
@@ -355,7 +349,7 @@ function update() {
     enemy.body.setOffset(enemy.width * 0.42, enemy.height * 0.43);
   } else if (
     player.body.x > enemy.body.x &&
-    parseInt(enemy.body.x - player.body.x) < -100
+    enemy.body.x - player.body.x < -50
   ) {
     enemy.setVelocityX(90);
     enemy.anims.play('enemyRunRight', true);
@@ -367,8 +361,4 @@ function update() {
   if (fKey.isDown) {
     player.anims.play('attack', true);
   }
-
-  // console.log('player: ' + player.body.x);
-  // console.log('enemy: ' + enemy.body.x);
-  // console.log('total: ' + parseFloat(enemy.body.x - player.body.x));
 }

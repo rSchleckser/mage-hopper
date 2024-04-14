@@ -17,7 +17,7 @@ const config = {
 };
 
 let player;
-let lives;
+let lives = 3;
 let enemy;
 let enemy2;
 let enemy3;
@@ -266,18 +266,25 @@ function create() {
 
   function playerDies(player, enemy) {
     player.disableBody(true, true);
+    if (lives > 1) {
+      lives--;
+      player.enableBody(
+        true,
+        Math.floor(Math.random() * 1700),
+        200,
+        true,
+        true
+      );
+      player.setBounce(0.1);
+      player.setCollideWorldBounds(true);
+
+      // Fix player collision-box origin and size
+      player.body.setSize(player.width * 0.43, player.height * 0.45);
+      player.body.setOffset(player.width * 0.15, player.height * 0.43);
+    } else {
+      console.log('Game Over!!');
+    }
   }
-
-  // function respawnPlayer() {
-  //   //create player
-  //   player = this.physics.add.sprite(150, 700, 'player').setScale(1.5);
-  //   player.setBounce(0.1);
-  //   player.setCollideWorldBounds(true);
-
-  //   //fix player collision-box origin and size
-  //   player.body.setSize(player.width * 0.43, player.height * 0.45);
-  //   player.body.setOffset(player.width * 0.15, player.height * 0.43);
-  // }
 
   function collectKey(player, key) {
     // Remove the key sprite from the scene
@@ -290,7 +297,6 @@ function create() {
     if (collectedKey === true) {
       // Create a fade-out effect
       this.cameras.main.fadeOut(500); // 500 milliseconds fade-out time
-
       // Wait for the fade-out to complete before destroying the door
       this.time.delayedCall(
         1000,
@@ -303,10 +309,11 @@ function create() {
     }
   }
 
-  //PLayers dies
+  //PLayers dies and respawns
   this.physics.add.collider(player, enemy, playerDies, null, this);
-
-  //collect the key and player overlap
+  this.physics.add.collider(player, enemy2, playerDies, null, this);
+  this.physics.add.collider(player, enemy3, playerDies, null, this);
+  //enables player to collect the key
   this.physics.add.overlap(player, key, collectKey, null, this);
   //player enters the door with key
   this.physics.add.overlap(player, door, enterDoor, null, this);
@@ -322,7 +329,7 @@ function create() {
 
 function update() {
   cursors = this.input.keyboard.createCursorKeys();
-
+  //player moveset
   if (cursors.left.isDown || aKey.isDown) {
     player.setVelocityX(-160);
     player.anims.play('left', true);
@@ -359,9 +366,8 @@ function update() {
   }
 
   //function for all enemies
-
   function enemyFollows(enemy, scene) {
-    // Enemy animation for following the player on the y-axis
+    // Enemy animation for following the enemies on the y-axis
     if (player.body.y < enemy.body.y && enemy.body.touching.down) {
       scene.time.delayedCall(
         550,
@@ -373,7 +379,7 @@ function update() {
       );
     }
 
-    // Enemy animation for following the player on the x-axis
+    // Enemy animation for following the enemies on the x-axis
     if (player.body.x < enemy.body.x && player.body.x + enemy.body.x > 50) {
       enemy.setVelocityX(-enemySpeed);
       enemy.anims.play('enemyRunLeft', true);
@@ -392,7 +398,7 @@ function update() {
     }
   }
 
-  // Call the function for each enemy
+  // Calls the function for each enemy
   enemyFollows(enemy, this);
   enemyFollows(enemy2, this);
   enemyFollows(enemy3, this);

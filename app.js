@@ -22,7 +22,6 @@ let enemy;
 let enemy2;
 let enemy3;
 const enemySpeed = 100;
-let jumpFrames;
 let ground;
 let platforms;
 let door;
@@ -46,7 +45,7 @@ function preload() {
   for (let i = 1; i <= 8; i++) {
     this.load.image('run' + i, './Mage/Run/run' + i + '.png');
   }
-
+  //load enemy running frames
   for (let i = 1; i <= 8; i++) {
     this.load.image('enemyRun' + i, './Knight/Run/run' + i + '.png');
   }
@@ -54,6 +53,10 @@ function preload() {
   // Load jumping animation frames
   for (let i = 1; i <= 7; i++) {
     this.load.image('jump' + i, './Mage/Jump/jump' + i + '.png');
+  }
+  //load enemy jumping frames
+  for (let i = 1; i <= 7; i++) {
+    this.load.image('enemyJump' + i, './Knight/Jump/jump' + i + '.png');
   }
 
   //load attack animation frames
@@ -156,9 +159,14 @@ function create() {
   }
 
   //set up jumping animation frames
-  jumpFrames = [];
+  let jumpFrames = [];
   for (let i = 1; i <= 7; i++) {
     jumpFrames.push({ key: 'jump' + i });
+  }
+
+  let enemyJumpFrames = [];
+  for (let i = 1; i <= 7; i++) {
+    enemyJumpFrames.push({ key: 'jump' + i });
   }
   //set up attack animation frames
   // let attackFrames = [];
@@ -166,34 +174,10 @@ function create() {
   //   attackFrames.push({ key: 'attack' + i });
   // }
 
-  //create the enemy runing right animation
+  //base animation
   this.anims.create({
-    key: 'enemyRunRight',
-    frames: enemyRunFrames,
-    frameRate: 10,
-    repeat: -1,
-  });
-
-  //create the enemy runing left animation
-  this.anims.create({
-    key: 'enemyRunLeft',
-    frames: enemyRunFrames,
-    frameRate: 10,
-    repeat: -1,
-    // Set flipX to true when playing the 'left' animation
-    onStart: function () {
-      enemy.setFlipX(true);
-    },
-    // Reset flipX to false when the 'left' animation ends
-    onComplete: function () {
-      enemy.setFlipX(false);
-    },
-  });
-
-  // enemy base animation
-  this.anims.create({
-    key: 'enemyTurn',
-    frames: [{ key: 'enemy' }],
+    key: 'turn',
+    frames: [{ key: 'player' }],
     frameRate: 10,
   });
 
@@ -211,13 +195,6 @@ function create() {
     onComplete: function () {
       player.setFlipX(false);
     },
-  });
-
-  //base animation
-  this.anims.create({
-    key: 'turn',
-    frames: [{ key: 'player' }],
-    frameRate: 10,
   });
 
   //right animation
@@ -250,6 +227,55 @@ function create() {
     frames: this.anims.generateFrameNumbers('attack', { start: 0, end: 5 }),
     frameRate: 4,
   });
+
+  // enemy base animation
+  this.anims.create({
+    key: 'enemyTurn',
+    frames: [{ key: 'enemy' }],
+    frameRate: 10,
+  });
+
+  //create the enemy runing right animation
+  this.anims.create({
+    key: 'enemyRunRight',
+    frames: enemyRunFrames,
+    frameRate: 10,
+    repeat: -1,
+  });
+
+  //create the enemy runing left animation
+  this.anims.create({
+    key: 'enemyRunLeft',
+    frames: enemyRunFrames,
+    frameRate: 10,
+    repeat: -1,
+    // Set flipX to true when playing the 'left' animation
+    onStart: function () {
+      enemy.setFlipX(true);
+    },
+    // Reset flipX to false when the 'left' animation ends
+    onComplete: function () {
+      enemy.setFlipX(false);
+    },
+  });
+
+  //jump animation
+  this.anims.create({
+    key: 'enemyJump',
+    frames: [enemyJumpFrames[1]],
+    frameRate: 4,
+    repeat: -1,
+  });
+
+  //fall animation
+  this.anims.create({
+    key: 'enemyFall',
+    frames: [enemyJumpFrames[5]],
+    frameRate: 4,
+    repeat: -1,
+  });
+
+  console.log(enemyJumpFrames);
 
   //add collision between objects in the game
   this.physics.add.collider(player, platforms);
@@ -292,7 +318,7 @@ function create() {
   function enterDoor(player, door) {
     if (collectedKey === true) {
       // Create a fade-out effect
-      this.cameras.main.fadeOut(500); // 500 milliseconds fade-out time
+      this.cameras.main.fadeOut(500);
       // Wait for the fade-out to complete before destroying the door
       this.time.delayedCall(
         1000,

@@ -113,12 +113,6 @@ function create() {
       .setSize(1000 * 0.25, 40 * 0.25);
   }
 
-  //level indicator
-  levelIndicator = this.add.text(16, 16, 'Level: 1', {
-    fontSize: '32px',
-    fill: '#000',
-  });
-
   //create player
   player = this.physics.add.sprite(150, 700, 'player').setScale(1.5);
   player.setBounce(0.1);
@@ -135,12 +129,14 @@ function create() {
   enemy.body.setSize(enemy.width * 0.43, enemy.height * 0.45);
   enemy.body.setOffset(enemy.width * 0.15, enemy.height * 0.43);
 
+  //create enemy2
   enemy2 = this.physics.add.sprite(1150, 272, 'enemy').setScale(1.5);
   enemy2.setCollideWorldBounds(true);
   //fix enemy collision-box origin and size
   enemy2.body.setSize(enemy.width * 0.43, enemy.height * 0.45);
   enemy2.body.setOffset(enemy.width * 0.15, enemy.height * 0.43);
 
+  //create enemy3
   enemy3 = this.physics.add.sprite(150, 272, 'enemy').setScale(1.5);
   enemy3.setCollideWorldBounds(true);
   //fix enemy collision-box origin and size
@@ -328,6 +324,18 @@ function create() {
 }
 
 function update() {
+  //level indicator
+  levelIndicator = this.add.text(16, 16, 'Level: 1', {
+    fontSize: '32px',
+    fill: '#000',
+  });
+
+  //Life Indicator
+  lifeIndicator = this.add.text(1700, 16, `Lives: ${lives}`, {
+    fontSize: '32px',
+    fill: 'red',
+  });
+
   cursors = this.input.keyboard.createCursorKeys();
   //player moveset
   if (cursors.left.isDown || aKey.isDown) {

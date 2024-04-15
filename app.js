@@ -460,8 +460,12 @@ const gameScene = {
 
 const config = {
   type: Phaser.AUTO,
-  width: 1890,
-  height: 890,
+  scale: {
+    mode: Phaser.Scale.FIT,
+    autoCenter: Phaser.Scale.CENTER_BOTH,
+    width: 1890,
+    height: 890,
+  },
   physics: {
     default: 'arcade',
     arcade: {
@@ -469,7 +473,7 @@ const config = {
       debug: true, // Set to true to see physics bodies
     },
   },
-  scene: [menuScene, gameScene],
+  scene: [menuScene, gameScene, gameOverScene],
   // scene: {
   //   preload: preload,
   //   create: create,

@@ -35,6 +35,12 @@ const menuScene = {
   },
 };
 
+const gameOverScene = {
+  key: 'GameOver',
+  preload: function () {},
+  create: function () {},
+};
+
 const gameScene = {
   key: 'Game',
 

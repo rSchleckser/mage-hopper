@@ -38,7 +38,15 @@ const menuScene = {
 const gameOverScene = {
   key: 'GameOver',
   preload: function () {},
-  create: function () {},
+  create: function () {
+    this.add
+      .text(16, 16, 'Game Over!!', { fontSize: '32px', fill: '#fff' })
+      .setInteractive()
+      .on('pointerdown', () => {
+        this.scene.start('Game');
+        lives = 3; // Transition to game scene
+      });
+  },
 };
 
 const gameScene = {
@@ -331,7 +339,7 @@ const gameScene = {
         player.body.setSize(player.width * 0.43, player.height * 0.45);
         player.body.setOffset(player.width * 0.15, player.height * 0.43);
       } else {
-        console.log('Game Over!!');
+        this.scene.start('GameOver');
       }
     }
 

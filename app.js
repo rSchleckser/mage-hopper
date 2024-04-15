@@ -9,12 +9,15 @@ const config = {
       debug: true, // Set to true to see physics bodies
     },
   },
+  // scene: [menuScene, gameScene],
   scene: {
     preload: preload,
     create: create,
     update: update,
   },
 };
+
+const game = new Phaser.Game(config);
 
 let player;
 let lives = 3;
@@ -27,8 +30,6 @@ let platforms;
 let door;
 let key;
 let collectedKey = false;
-
-const game = new Phaser.Game(config);
 
 function preload() {
   this.load.image('background', './img/nature_background.jpg');
@@ -71,6 +72,18 @@ function preload() {
 
 function create() {
   this.add.image(1000, 400, 'background');
+
+  //level indicator
+  levelIndicator = this.add.text(16, 16, 'Level: 1', {
+    fontSize: '32px',
+    fill: '#000',
+  });
+
+  //Life Indicator
+  lifeIndicator = this.add.text(1700, 16, `Lives: ${lives}`, {
+    fontSize: '32px',
+    fill: 'red',
+  });
 
   //add key
   key = this.physics.add.sprite(170, 265, 'key').setScale(0.2);
@@ -289,7 +302,8 @@ function create() {
   function playerDies(player, enemy) {
     player.disableBody(true, true);
     if (lives > 1) {
-      lives--;
+      lives -= 1;
+      lifeIndicator.setText(`Lives: ${lives}`);
       player.enableBody(
         true,
         Math.floor(Math.random() * 1700),
@@ -350,18 +364,6 @@ function create() {
 }
 
 function update() {
-  //level indicator
-  levelIndicator = this.add.text(16, 16, 'Level: 1', {
-    fontSize: '32px',
-    fill: '#000',
-  });
-
-  //Life Indicator
-  lifeIndicator = this.add.text(1700, 16, `Lives: ${lives}`, {
-    fontSize: '32px',
-    fill: 'red',
-  });
-
   cursors = this.input.keyboard.createCursorKeys();
   //player moveset
   if (cursors.left.isDown || aKey.isDown) {

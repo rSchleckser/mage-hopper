@@ -10,6 +10,31 @@ let door;
 let key;
 let collectedKey = false;
 
+const menuScene = {
+  key: 'Menu',
+
+  preload: function () {
+    this.load.image('background', './img/nature_background.jpg');
+  },
+
+  create: function () {
+    this.add.image(1000, 400, 'background');
+
+    // Add menu text/buttons
+    this.add
+      .text(16, 16, 'Start Game', { fontSize: '32px', fill: '#fff' })
+      .setInteractive()
+      .on('pointerdown', () => {
+        this.scene.start('Game'); // Transition to game scene
+      });
+
+    this.add
+      .text(1500, 16, 'Instructions', { fontSize: '32px', fill: '#fff' })
+      .setInteractive()
+      .on('pointerdown', () => {});
+  },
+};
+
 const gameScene = {
   key: 'Game',
 
@@ -438,7 +463,7 @@ const config = {
       debug: true, // Set to true to see physics bodies
     },
   },
-  scene: [gameScene],
+  scene: [menuScene, gameScene],
   // scene: {
   //   preload: preload,
   //   create: create,

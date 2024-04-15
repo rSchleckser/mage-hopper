@@ -1,5 +1,6 @@
 let player;
 let lives = 3;
+let level = 1;
 let enemy;
 let enemy2;
 let enemy3;
@@ -45,6 +46,23 @@ const gameOverScene = {
       .on('pointerdown', () => {
         this.scene.start('Game');
         lives = 3; // Transition to game scene
+      });
+  },
+};
+
+const levelWinScene = {
+  key: 'NextLevel',
+  preload: function () {},
+  create: function () {
+    this.add
+      .text(16, 16, `Congratulations!! Ready to move on to Level: ${level}`, {
+        fontSize: '32px',
+        fill: '#fff',
+      })
+      .setInteractive()
+      .on('pointerdown', () => {
+        this.scene.start('Game'); // Transition to game scene
+        lives = 3;
       });
   },
 };
@@ -95,7 +113,7 @@ const gameScene = {
     this.add.image(1000, 400, 'background');
 
     //level indicator
-    levelIndicator = this.add.text(16, 16, 'Level: 1', {
+    levelIndicator = this.add.text(16, 16, `Level: ${level}`, {
       fontSize: '32px',
       fill: '#000',
     });
@@ -359,6 +377,9 @@ const gameScene = {
           1000,
           function () {
             door.destroy();
+            collectedKey = false;
+            level += 1;
+            this.scene.start('NextLevel');
           },
           [],
           this
@@ -425,6 +446,7 @@ const gameScene = {
     //function for all enemies
     function enemyFollows(enemy, scene) {
       // Enemy animation for following the enemies on the y-axis
+      //Enemy has a .55 second delay jumping after player jumps
       if (player.body.y < enemy.body.y && enemy.body.touching.down) {
         scene.time.delayedCall(
           550,
@@ -481,7 +503,7 @@ const config = {
       debug: true, // Set to true to see physics bodies
     },
   },
-  scene: [menuScene, gameScene, gameOverScene],
+  scene: [menuScene, gameScene, gameOverScene, levelWinScene],
   // scene: {
   //   preload: preload,
   //   create: create,

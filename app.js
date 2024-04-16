@@ -6,6 +6,7 @@ let enemy;
 let enemy2;
 let enemy3;
 const enemySpeed = 100;
+let speedDifficulty = 1 + (level - 1) / 5;
 let ground;
 let platforms;
 let door;
@@ -74,10 +75,10 @@ const gameOverScene = {
   key: 'GameOver',
   preload: function () {},
   create: function () {
-    this.add.text(750, 350, 'Game Over!!', { fontSize: '72px', fill: '#fff' });
+    this.add.text(750, 300, 'Game Over!!', { fontSize: '72px', fill: '#fff' });
 
     const playAgain = this.add
-      .text(780, 500, 'Play Again?', {
+      .text(780, 450, 'Play Again?', {
         fontSize: '48px',
         fill: '#fff',
         fontFamily: 'Roboto',
@@ -100,7 +101,7 @@ const gameOverScene = {
     });
 
     const quit = this.add
-      .text(1050, 500, 'Quit', {
+      .text(1050, 450, 'Quit', {
         fontSize: '48px',
         fill: '#fff',
         fontFamily: 'Roboto',
@@ -125,16 +126,41 @@ const levelWinScene = {
   key: 'NextLevel',
   preload: function () {},
   create: function () {
+    this.add.text(730, 250, `Congratulations!!`, {
+      fontFamily: 'Augustine',
+      fontSize: '64px',
+      fill: '#fff',
+    });
+
     this.add
-      .text(16, 16, `Congratulations!! Ready to move on to Level: ${level}`, {
-        fontSize: '32px',
+      .text(750, 380, `Ready to move on to`, {
+        fontFamily: 'Roboto',
+        fontSize: '48px',
         fill: '#fff',
       })
-      .setInteractive()
-      .on('pointerdown', () => {
-        this.scene.start('Game'); // Transition to game scene
-        lives = 3;
-      });
+      .setInteractive();
+
+    const nextLevel = this.add
+      .text(870, 500, `Level: ${level}`, {
+        fontFamily: 'Roboto',
+        fontSize: '48px',
+        fill: '#fff',
+      })
+      .setInteractive();
+
+    nextLevel.on('pointerdown', () => {
+      this.scene.start('Game'); // Transition to game scene
+      lives = 3;
+    });
+
+    nextLevel.setInteractive().on('pointerover', () => {
+      nextLevel.setShadow(2, 2, 'rgba(42, 145, 113,0.5)', 2);
+      nextLevel.setColor('rgba(42, 145, 145,0.9)');
+    });
+    nextLevel.setInteractive().on('pointerout', () => {
+      nextLevel.setShadow(0, 0, 'rgba(0,0,0,0.5)', 1);
+      nextLevel.setColor('rgb(255,255,255)');
+    });
   },
 };
 
@@ -516,7 +542,7 @@ const gameScene = {
     //function for all enemies
     function enemyFollows(enemy, scene) {
       // Enemy animation for following the enemies on the y-axis
-      //Enemy has a .55 second delay jumping after player jumps
+      //Enemy has a  delay jumping after player jumps
       if (player.body.y < enemy.body.y && enemy.body.touching.down) {
         scene.time.delayedCall(
           650,
@@ -542,7 +568,7 @@ const gameScene = {
         player.body.x + enemy.body.x > 50 &&
         enemy.body.touching.down
       ) {
-        enemy.setVelocityX(-enemySpeed);
+        enemy.setVelocityX(-enemySpeed * speedDifficulty);
         enemy.anims.play('enemyRunLeft', true);
         enemy.setFlipX(true); // Flip the enemy when moving left
         enemy.body.setSize(enemy.width * 0.43, enemy.height * 0.45);
@@ -552,7 +578,7 @@ const gameScene = {
         enemy.body.x - player.body.x < -50 &&
         enemy.body.touching.down
       ) {
-        enemy.setVelocityX(enemySpeed);
+        enemy.setVelocityX(enemySpeed * speedDifficulty);
         enemy.anims.play('enemyRunRight', true);
         enemy.setFlipX(false); // Flip the enemy when moving left
         enemy.body.setSize(enemy.width * 0.43, enemy.height * 0.45);

@@ -1,5 +1,6 @@
 let player;
 let lives = 3;
+let deathComplete = false;
 let level = 1;
 let enemy;
 let enemy2;
@@ -99,6 +100,15 @@ const gameScene = {
       this.load.image('enemyJump' + i, './Knight/Jump/jump' + i + '.png');
     }
 
+    //Load Death animation frames
+    this.load.spritesheet('death', './Mage/newDeath.png', {
+      frameWidth: 32,
+      frameHeight: 32,
+    });
+
+    console.log(this.textures.get('run').source[0].width); // Width
+    console.log(this.textures.get('run').source[0].height); // Height
+
     //load attack animation frames
     // for (let i = 1; i <= 7; i++) {
     //   this.load.image('attack' + i, './Mage/Attack/attack' + i + '.png');
@@ -159,7 +169,6 @@ const gameScene = {
     }
 
     //third stage
-
     for (let i = 0; i < 4; i++) {
       platforms
         .create(150 + 500 * i, 350, 'platform')
@@ -218,8 +227,9 @@ const gameScene = {
 
     let enemyJumpFrames = [];
     for (let i = 1; i <= 7; i++) {
-      enemyJumpFrames.push({ key: 'jump' + i });
+      enemyJumpFrames.push({ key: 'enemyJump' + i });
     }
+
     //set up attack animation frames
     // let attackFrames = [];
     // for (let i = 1; i <= 7; i++) {
@@ -273,6 +283,14 @@ const gameScene = {
       repeat: -1,
     });
 
+    //death animation
+    this.anims.create({
+      key: 'death',
+      frames: this.anims.generateFrameNumbers('death', { start: 0, end: 59 }),
+      frameRate: 10,
+      repeat: 0,
+    });
+
     //attack animation
     this.anims.create({
       key: 'attack',
@@ -315,7 +333,7 @@ const gameScene = {
     this.anims.create({
       key: 'enemyJump',
       frames: [enemyJumpFrames[1]],
-      frameRate: 4,
+      frameRate: 10,
       repeat: -1,
     });
 
@@ -357,6 +375,8 @@ const gameScene = {
         player.body.setSize(player.width * 0.43, player.height * 0.45);
         player.body.setOffset(player.width * 0.15, player.height * 0.43);
       } else {
+        lives -= 1;
+        lifeIndicator.setText(`Lives: ${lives}`);
         this.scene.start('GameOver');
       }
     }
@@ -364,7 +384,6 @@ const gameScene = {
     function collectKey(player, key) {
       // Remove the key sprite from the scene
       collectedKey = true;
-      console.log(collectedKey);
       key.destroy();
     }
 
@@ -443,13 +462,21 @@ const gameScene = {
       player.anims.play('jump', true);
     }
 
+    //player death
+    // if (lives === 0) {
+    //   player.anims.play('death', true);
+    //   // console.log(this.textures.get('death').frames); // Log spritesheet frames data
+
+    //   deathComplete = true;
+    // }
+
     //function for all enemies
     function enemyFollows(enemy, scene) {
       // Enemy animation for following the enemies on the y-axis
       //Enemy has a .55 second delay jumping after player jumps
       if (player.body.y < enemy.body.y && enemy.body.touching.down) {
         scene.time.delayedCall(
-          550,
+          500,
           function () {
             enemy.setVelocityY(-350);
           },
@@ -458,8 +485,19 @@ const gameScene = {
         );
       }
 
+      if (!enemy.body.touching.down && !(enemy.body.velocity.y > 0)) {
+        enemy.anims.play('enemyJump', true);
+      }
+      if (!enemy.body.touching.down && enemy.body.velocity.y > 0) {
+        enemy.anims.play('enemyFall', true);
+      }
+
       // Enemy animation for following the enemies on the x-axis
-      if (player.body.x < enemy.body.x && player.body.x + enemy.body.x > 50) {
+      if (
+        player.body.x < enemy.body.x &&
+        player.body.x + enemy.body.x > 50 &&
+        enemy.body.touching.down
+      ) {
         enemy.setVelocityX(-enemySpeed);
         enemy.anims.play('enemyRunLeft', true);
         enemy.setFlipX(true); // Flip the enemy when moving left
@@ -467,7 +505,8 @@ const gameScene = {
         enemy.body.setOffset(enemy.width * 0.42, enemy.height * 0.43);
       } else if (
         player.body.x > enemy.body.x &&
-        enemy.body.x - player.body.x < -50
+        enemy.body.x - player.body.x < -50 &&
+        enemy.body.touching.down
       ) {
         enemy.setVelocityX(enemySpeed);
         enemy.anims.play('enemyRunRight', true);

@@ -57,8 +57,8 @@ const menuScene = {
         fill: '#000',
         fontFamily: 'Roboto',
       })
-      .setInteractive()
-      .on('pointerdown', () => {});
+      .setInteractive();
+
     instructions.setInteractive().on('pointerover', () => {
       instructions.setShadow(2, 2, 'rgba(42, 145, 113,0.5)', 2);
       instructions.setColor('rgba(42, 145, 145,0.9)');
@@ -74,13 +74,50 @@ const gameOverScene = {
   key: 'GameOver',
   preload: function () {},
   create: function () {
-    this.add
-      .text(16, 16, 'Game Over!!', { fontSize: '32px', fill: '#fff' })
-      .setInteractive()
-      .on('pointerdown', () => {
-        this.scene.start('Game');
-        lives = 3; // Transition to game scene
-      });
+    this.add.text(750, 350, 'Game Over!!', { fontSize: '72px', fill: '#fff' });
+
+    const playAgain = this.add
+      .text(780, 500, 'Play Again?', {
+        fontSize: '48px',
+        fill: '#fff',
+        fontFamily: 'Roboto',
+      })
+      .setInteractive();
+
+    playAgain.on('pointerdown', () => {
+      this.scene.start('Game'); // Transition to game scene
+      lives = 3;
+      level = 1;
+    });
+
+    playAgain.setInteractive().on('pointerover', () => {
+      playAgain.setShadow(2, 2, 'rgba(42, 145, 113,0.5)', 2);
+      playAgain.setColor('rgba(42, 145, 145,0.9)');
+    });
+    playAgain.setInteractive().on('pointerout', () => {
+      playAgain.setShadow(0, 0, 'rgba(0,0,0,0.5)', 1);
+      playAgain.setColor('rgb(255,255,255)');
+    });
+
+    const quit = this.add
+      .text(1050, 500, 'Quit', {
+        fontSize: '48px',
+        fill: '#fff',
+        fontFamily: 'Roboto',
+      })
+      .setInteractive();
+
+    quit.on('pointerdown', () => {
+      this.scene.start('Menu'); // Transition to game scene
+    });
+    quit.setInteractive().on('pointerover', () => {
+      quit.setShadow(2, 2, 'rgba(42, 145, 113,0.5)', 2);
+      quit.setColor('rgba(42, 145, 145,0.9)');
+    });
+    quit.setInteractive().on('pointerout', () => {
+      quit.setShadow(0, 0, 'rgba(0,0,0,0.5)', 1);
+      quit.setColor('rgb(255,255,255)');
+    });
   },
 };
 
@@ -370,7 +407,7 @@ const gameScene = {
         player.enableBody(
           true,
           Math.floor(Math.random() * 1700),
-          Math.floor(Math.random() * 890),
+          Math.floor(Math.random() * 700),
           true,
           true
         );

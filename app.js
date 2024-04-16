@@ -124,19 +124,22 @@ const gameOverScene = {
 
 const levelWinScene = {
   key: 'NextLevel',
-  preload: function () {},
+  preload: function () {
+    this.load.image('Background', './img/nature_background.jpg');
+  },
   create: function () {
+    this.add.image(1000, 400, 'Background');
     this.add.text(730, 250, `Congratulations!!`, {
       fontFamily: 'Augustine',
       fontSize: '64px',
-      fill: '#fff',
+      fill: '#000',
     });
 
     this.add
       .text(750, 380, `Ready to move on to`, {
         fontFamily: 'Roboto',
         fontSize: '48px',
-        fill: '#fff',
+        fill: '#000',
       })
       .setInteractive();
 
@@ -144,7 +147,7 @@ const levelWinScene = {
       .text(870, 500, `Level: ${level}`, {
         fontFamily: 'Roboto',
         fontSize: '48px',
-        fill: '#fff',
+        fill: '#000',
       })
       .setInteractive();
 
@@ -159,7 +162,7 @@ const levelWinScene = {
     });
     nextLevel.setInteractive().on('pointerout', () => {
       nextLevel.setShadow(0, 0, 'rgba(0,0,0,0.5)', 1);
-      nextLevel.setColor('rgb(255,255,255)');
+      nextLevel.setColor('rgb(0,0,0)');
     });
   },
 };

@@ -22,18 +22,51 @@ const menuScene = {
   create: function () {
     this.add.image(1000, 400, 'background');
 
-    // Add menu text/buttons
-    this.add
-      .text(16, 16, 'Start Game', { fontSize: '32px', fill: '#fff' })
-      .setInteractive()
-      .on('pointerdown', () => {
-        this.scene.start('Game'); // Transition to game scene
-      });
+    //Add title
+    this.add.text(760, 200, 'Mage Hopper', {
+      fontSize: '64px',
+      fontFamily: 'Augustine',
+      fill: '#000',
+    });
 
-    this.add
-      .text(1500, 16, 'Instructions', { fontSize: '32px', fill: '#fff' })
+    // Add menu text/buttons
+    const startGame = this.add
+      .text(850, 400, 'Start Game', {
+        fontSize: '32px',
+        fill: '#000',
+        fontFamily: 'Roboto',
+      })
+      .setInteractive();
+
+    startGame.on('pointerdown', () => {
+      this.scene.start('Game'); // Transition to game scene
+    });
+
+    startGame.setInteractive().on('pointerover', () => {
+      startGame.setShadow(2, 2, 'rgba(42, 145, 113,0.5)', 2);
+      startGame.setColor('rgba(42, 145, 145,0.9)');
+    });
+    startGame.setInteractive().on('pointerout', () => {
+      startGame.setShadow(0, 0, 'rgba(0,0,0,0.5)', 1);
+      startGame.setColor('rgb(0,0,0)');
+    });
+
+    const instructions = this.add
+      .text(850, 450, 'Instructions', {
+        fontSize: '32px',
+        fill: '#000',
+        fontFamily: 'Roboto',
+      })
       .setInteractive()
       .on('pointerdown', () => {});
+    instructions.setInteractive().on('pointerover', () => {
+      instructions.setShadow(2, 2, 'rgba(42, 145, 113,0.5)', 2);
+      instructions.setColor('rgba(42, 145, 145,0.9)');
+    });
+    instructions.setInteractive().on('pointerout', () => {
+      instructions.setShadow(0, 0, 'rgba(0,0,0,0.5)', 1);
+      instructions.setColor('rgb(0,0,0)');
+    });
   },
 };
 
@@ -104,18 +137,6 @@ const gameScene = {
     this.load.spritesheet('death', './Mage/newDeath.png', {
       frameWidth: 32,
       frameHeight: 32,
-    });
-
-    console.log(this.textures.get('run').source[0].width); // Width
-    console.log(this.textures.get('run').source[0].height); // Height
-
-    //load attack animation frames
-    // for (let i = 1; i <= 7; i++) {
-    //   this.load.image('attack' + i, './Mage/Attack/attack' + i + '.png');
-    // }
-    this.load.spritesheet('attack', './Mage/new.png', {
-      frameWidth: 71,
-      frameHeight: 83,
     });
   },
 
@@ -201,7 +222,7 @@ const gameScene = {
     enemy2.body.setOffset(enemy.width * 0.15, enemy.height * 0.43);
 
     //create enemy3
-    enemy3 = this.physics.add.sprite(150, 272, 'enemy').setScale(1.5);
+    enemy3 = this.physics.add.sprite(1650, 272, 'enemy').setScale(1.5);
     enemy3.setCollideWorldBounds(true);
     //fix enemy collision-box origin and size
     enemy3.body.setSize(enemy.width * 0.43, enemy.height * 0.45);
@@ -229,12 +250,6 @@ const gameScene = {
     for (let i = 1; i <= 7; i++) {
       enemyJumpFrames.push({ key: 'enemyJump' + i });
     }
-
-    //set up attack animation frames
-    // let attackFrames = [];
-    // for (let i = 1; i <= 7; i++) {
-    //   attackFrames.push({ key: 'attack' + i });
-    // }
 
     //base animation
     this.anims.create({
@@ -291,13 +306,6 @@ const gameScene = {
       repeat: 0,
     });
 
-    //attack animation
-    this.anims.create({
-      key: 'attack',
-      frames: this.anims.generateFrameNumbers('attack', { start: 0, end: 5 }),
-      frameRate: 4,
-    });
-
     // enemy base animation
     this.anims.create({
       key: 'enemyTurn',
@@ -345,8 +353,6 @@ const gameScene = {
       repeat: -1,
     });
 
-    console.log(enemyJumpFrames);
-
     //add collision between objects in the game
     this.physics.add.collider(player, platforms);
     this.physics.add.collider(enemy, platforms);
@@ -364,7 +370,7 @@ const gameScene = {
         player.enableBody(
           true,
           Math.floor(Math.random() * 1700),
-          200,
+          Math.floor(Math.random() * 890),
           true,
           true
         );
@@ -476,7 +482,7 @@ const gameScene = {
       //Enemy has a .55 second delay jumping after player jumps
       if (player.body.y < enemy.body.y && enemy.body.touching.down) {
         scene.time.delayedCall(
-          500,
+          650,
           function () {
             enemy.setVelocityY(-350);
           },
@@ -493,6 +499,7 @@ const gameScene = {
       }
 
       // Enemy animation for following the enemies on the x-axis
+
       if (
         player.body.x < enemy.body.x &&
         player.body.x + enemy.body.x > 50 &&
@@ -520,10 +527,6 @@ const gameScene = {
     enemyFollows(enemy, this);
     enemyFollows(enemy2, this);
     enemyFollows(enemy3, this);
-
-    if (fKey.isDown) {
-      player.anims.play('attack', true);
-    }
   },
 };
 
@@ -539,7 +542,7 @@ const config = {
     default: 'arcade',
     arcade: {
       gravity: { y: 300 }, // Set gravity
-      debug: true, // Set to true to see physics bodies
+      debug: false, // Set to true to see physics bodies
     },
   },
   scene: [menuScene, gameScene, gameOverScene, levelWinScene],

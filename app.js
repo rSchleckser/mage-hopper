@@ -6,7 +6,7 @@ let enemy;
 let enemy2;
 let enemy3;
 const enemySpeed = 100;
-let speedDifficulty = 1 + (level - 1) / 5;
+
 let ground;
 let platforms;
 let door;
@@ -17,7 +17,19 @@ const menuScene = {
   key: 'Menu',
 
   preload: function () {
+    const instructionPages = [
+      { page: 'Page1', image: './img/instructions_page_1.png' },
+      { page: 'Page2', image: './img/instructions_page_2.png' },
+      { page: 'Page3', image: './img/instructions_page_3.png' },
+    ];
     this.load.image('background', './img/nature_background.jpg');
+    this.load.image(instructionPages[0].page, instructionPages[0].image);
+    this.load.image(instructionPages[1].page, instructionPages[1].image);
+    this.load.image(instructionPages[2].page, instructionPages[2].image);
+
+    //   this.load.image('Page1', './img/instructions_page_1.png');
+    //   this.load.image('Page1', './img/instructions_page_1.png');
+    //   this.load.image('Page3', './img/instructions_page_3.png');
   },
 
   create: function () {
@@ -52,6 +64,7 @@ const menuScene = {
       startGame.setColor('rgb(0,0,0)');
     });
 
+    //setup instructions button
     const instructions = this.add
       .text(850, 450, 'Instructions', {
         fontSize: '32px',
@@ -67,6 +80,84 @@ const menuScene = {
     instructions.setInteractive().on('pointerout', () => {
       instructions.setShadow(0, 0, 'rgba(0,0,0,0.5)', 1);
       instructions.setColor('rgb(0,0,0)');
+    });
+
+    //making instruction interactive
+    instructions.on('pointerdown', () => {
+      let index = 1;
+      const instructionImage = this.add.image(1000, 450, 'Page' + index); // Show instructions
+      const nextPage = this.add
+        .text(1350, 100, 'Next Page', {
+          fontSize: '32px',
+          fill: 'rgba(42, 145, 145,0.9)',
+          fontFamily: 'Roboto',
+        })
+        .setInteractive();
+
+      //add hover effect to next page button
+      nextPage.setInteractive().on('pointerover', () => {
+        nextPage.setShadow(2, 2, 'rgba(0,0,0,0.5)', 2);
+        nextPage.setColor('rgb(0,0,0)');
+      });
+      nextPage.setInteractive().on('pointerout', () => {
+        nextPage.setShadow(1, 1, 'rgba(42, 145, 113,0.5)', 2);
+        nextPage.setColor('rgba(42, 145, 145,0.9)');
+      });
+
+      nextPage.on('pointerdown', () => {
+        if (index < 3) {
+          index++;
+          instructionImage.setTexture('Page' + index);
+        } else {
+          // add a closing function
+          nextPage.destroy();
+          const closeinstructions = this.add
+            .text(1350, 100, 'Close', {
+              fontSize: '32px',
+              fill: 'rgb(145, 42, 42)',
+              fontFamily: 'Roboto',
+            })
+            .setInteractive();
+
+          closeinstructions.setInteractive().on('pointerover', () => {
+            closeinstructions.setShadow(2, 2, 'rgba(145, 42, 42, 0.5)', 1);
+            closeinstructions.setColor('rgb(145, 42, 42))');
+          });
+          closeinstructions.setInteractive().on('pointerout', () => {
+            closeinstructions.setShadow(1, 1, 'rgba(145, 42, 42,0.5)', 2);
+            closeinstructions.setColor('rgb(145, 42, 42)');
+          });
+          closeinstructions.on('pointerdown', () => {
+            this.scene.start('Menu');
+          });
+        }
+      });
+
+      //add previous page function
+      const prevPage = this.add
+        .text(525, 100, 'Previous Page', {
+          fontSize: '32px',
+          fill: 'rgba(42, 145, 145,0.9)',
+          fontFamily: 'Roboto',
+        })
+        .setInteractive();
+
+      //add hover effect to next page button
+      prevPage.setInteractive().on('pointerover', () => {
+        prevPage.setShadow(2, 2, 'rgba(0,0,0,0.5)', 2);
+        prevPage.setColor('rgb(0,0,0)');
+      });
+      prevPage.setInteractive().on('pointerout', () => {
+        prevPage.setShadow(1, 1, 'rgba(42, 145, 113,0.5)', 2);
+        prevPage.setColor('rgba(42, 145, 145,0.9)');
+      });
+
+      prevPage.on('pointerdown', () => {
+        if (index > 1) {
+          index--;
+          instructionImage.setTexture('Page' + index);
+        }
+      });
     });
   },
 };
@@ -492,8 +583,6 @@ const gameScene = {
     sKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S);
     aKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A);
     dKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D);
-    spaceBar = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
-    fKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F);
   },
 
   update: function () {
@@ -557,11 +646,21 @@ const gameScene = {
         );
       }
 
-      if (!enemy.body.touching.down && !(enemy.body.velocity.y > 0)) {
-        enemy.anims.play('enemyJump', true);
-      }
-      if (!enemy.body.touching.down && enemy.body.velocity.y > 0) {
-        enemy.anims.play('enemyFall', true);
+      //Knights jumping animation changes at level 3, to disguise itself.
+      if (level < 3) {
+        if (!enemy.body.touching.down && !(enemy.body.velocity.y > 0)) {
+          enemy.anims.play('enemyJump', true);
+        }
+        if (!enemy.body.touching.down && enemy.body.velocity.y > 0) {
+          enemy.anims.play('enemyFall', true);
+        }
+      } else {
+        if (!enemy.body.touching.down && !(enemy.body.velocity.y > 0)) {
+          enemy.anims.play('jump', true);
+        }
+        if (!enemy.body.touching.down && enemy.body.velocity.y > 0) {
+          enemy.anims.play('fall', true);
+        }
       }
 
       // Enemy animation for following the enemies on the x-axis
@@ -571,7 +670,7 @@ const gameScene = {
         player.body.x + enemy.body.x > 50 &&
         enemy.body.touching.down
       ) {
-        enemy.setVelocityX(-enemySpeed * speedDifficulty);
+        enemy.setVelocityX(-enemySpeed * (1 + (level - 1) / 10));
         enemy.anims.play('enemyRunLeft', true);
         enemy.setFlipX(true); // Flip the enemy when moving left
         enemy.body.setSize(enemy.width * 0.43, enemy.height * 0.45);
@@ -581,9 +680,9 @@ const gameScene = {
         enemy.body.x - player.body.x < -50 &&
         enemy.body.touching.down
       ) {
-        enemy.setVelocityX(enemySpeed * speedDifficulty);
+        enemy.setVelocityX(enemySpeed * (1 + (level - 1) / 10));
         enemy.anims.play('enemyRunRight', true);
-        enemy.setFlipX(false); // Flip the enemy when moving left
+        enemy.setFlipX(false); // Flip the enemy when moving right
         enemy.body.setSize(enemy.width * 0.43, enemy.height * 0.45);
         enemy.body.setOffset(enemy.width * 0.15, enemy.height * 0.43);
       }

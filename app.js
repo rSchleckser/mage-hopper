@@ -360,8 +360,25 @@ const gameScene = {
     //Life Indicator
     lifeIndicator = this.add.text(1700, 16, `Lives: ${lives}`, {
       fontSize: '32px',
-      fill: 'red',
+      fill: 'blue',
     });
+
+    //Player Speed Indicator
+    playerSpeedIndicator = this.add.text(500, 16, `Player Speed: 160`, {
+      fontSize: '32px',
+      fill: 'green',
+    });
+
+    //Enemy Speed Indicator
+    enemySpeedIndicator = this.add.text(
+      900,
+      16,
+      `Enemy Speed: ${parseInt(enemySpeed * (1 + level / 8.3))}`,
+      {
+        fontSize: '32px',
+        fill: 'red',
+      }
+    );
 
     //key spawn points for each level
     this.keyArray = [
@@ -401,7 +418,6 @@ const gameScene = {
     ground = platforms.create(950, 990).refreshBody();
     ground.body.setSize(1900, 240);
 
-    // function displayStage(arrayX, arrayY){}
     // first stage
     for (let i = 1; i < 3; i++) {
       platforms
@@ -613,7 +629,8 @@ const gameScene = {
         player.enableBody(
           true,
           Math.floor(Math.random() * 1700),
-          Math.floor(Math.random() * 700),
+          800,
+          // Math.floor(Math.random() * 700),
           true,
           true
         );
@@ -744,7 +761,7 @@ const gameScene = {
           player.body.x + enemy.body.x > 50 &&
           enemy.body.touching.down
         ) {
-          enemy.setVelocityX(-enemySpeed * (1 + (level - 1) / 10));
+          enemy.setVelocityX(-enemySpeed * (1 + level / 8.3));
           enemy.anims.play('enemyRunLeft', true);
           enemy.setFlipX(true); // Flip the enemy when moving left
           enemy.body.setSize(enemy.width * 0.43, enemy.height * 0.45);
@@ -754,7 +771,7 @@ const gameScene = {
           enemy.body.x - player.body.x < -50 &&
           enemy.body.touching.down
         ) {
-          enemy.setVelocityX(enemySpeed * (1 + (level - 1) / 10));
+          enemy.setVelocityX(enemySpeed * (1 + level / 8.3));
           enemy.anims.play('enemyRunRight', true);
           enemy.setFlipX(false); // Flip the enemy when moving right
           enemy.body.setSize(enemy.width * 0.43, enemy.height * 0.45);
@@ -767,7 +784,7 @@ const gameScene = {
           player.body.x + enemy.body.x > 50 &&
           enemy.body.touching.down
         ) {
-          enemy.setVelocityX(-enemySpeed * (1 + (level - 1) / 10));
+          enemy.setVelocityX(-enemySpeed * (1 + level / 8.3));
           enemy.anims.play('left', true);
           enemy.setFlipX(true); // Flip the enemy when moving left
           enemy.body.setSize(enemy.width * 0.43, enemy.height * 0.45);
@@ -777,7 +794,7 @@ const gameScene = {
           enemy.body.x - player.body.x < -50 &&
           enemy.body.touching.down
         ) {
-          enemy.setVelocityX(enemySpeed * (1 + (level - 1) / 10));
+          enemy.setVelocityX(enemySpeed * (1 + level / 8.3));
           enemy.anims.play('right', true);
           enemy.setFlipX(false); // Flip the enemy when moving right
           enemy.body.setSize(enemy.width * 0.43, enemy.height * 0.45);

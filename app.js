@@ -1,12 +1,10 @@
 let player;
 let lives = 3;
-let deathComplete = false;
 let level = 1;
 let enemy;
 let enemy2;
 let enemy3;
 const enemySpeed = 100;
-
 let ground;
 let platforms;
 let door;
@@ -252,12 +250,14 @@ const gameWinScene = {
   key: 'GameWin',
   preload: function () {},
   create: function () {
-    this.add.text(600, 200, 'Congratulations!!', {
+    this.add.text(700, 200, 'Congratulations!!', {
       fontSize: '72px',
+      fontFamily: 'Augustine',
       fill: '#fff',
     });
-    this.add.text(600, 300, 'You Won the Game!', {
+    this.add.text(675, 300, 'You Won the Game!', {
       fontSize: '72px',
+      fontFamily: 'Augustine',
       fill: '#fff',
     });
 
@@ -363,14 +363,36 @@ const gameScene = {
       fill: 'red',
     });
 
+    //key spawn points for each level
+    this.keyArray = [
+      { x: 170, y: 265 },
+      { x: 1370, y: 465 },
+      { x: 1670, y: 750 },
+      { x: 170, y: 265 },
+      { x: 1020, y: 65 },
+    ];
+
     //add key
-    key = this.physics.add.sprite(170, 265, 'key').setScale(0.2);
+    key = this.physics.add
+      .sprite(this.keyArray[level - 1].x, this.keyArray[level - 1].y, 'key')
+      .setScale(0.2);
     key.setBounce(1.0);
     key.body.setSize(key.width * 0.7, key.height * 1);
     key.body.setOffset(key.width * 0.15, key.height * 0.2);
 
+    //door spawn points for each level
+    this.doorArray = [
+      { x: 1650, y: 253 },
+      { x: 150, y: 253 },
+      { x: 850, y: 453 },
+      { x: 1650, y: 778 },
+      { x: 150, y: 778 },
+    ];
+
     //add door
-    door = this.physics.add.sprite(1650, 253, 'door').setScale(0.1);
+    door = this.physics.add
+      .sprite(this.doorArray[level - 1].x, this.doorArray[level - 1].y, 'door')
+      .setScale(0.1);
     door.body.setSize(door.width * 0.5, door.height * 0.9);
 
     platforms = this.physics.add.staticGroup();
@@ -379,10 +401,11 @@ const gameScene = {
     ground = platforms.create(950, 990).refreshBody();
     ground.body.setSize(1900, 240);
 
+    // function displayStage(arrayX, arrayY){}
     // first stage
     for (let i = 1; i < 3; i++) {
       platforms
-        .create(150 + 500 * i, 720, 'platform')
+        .create(100 + 500 * i, 720, 'platform')
         .setScale(0.25)
         .refreshBody()
         .setSize(1000 * 0.25, 40 * 0.25);
@@ -406,8 +429,19 @@ const gameScene = {
         .setSize(1000 * 0.25, 40 * 0.25);
     }
 
+    //fourth stage spawns at level 5
+    if (level === 5) {
+      for (let i = 1; i < 3; i++) {
+        platforms
+          .create(500 * i, 150, 'platform')
+          .setScale(0.25)
+          .refreshBody()
+          .setSize(1000 * 0.25, 40 * 0.25);
+      }
+    }
+
     //create player
-    player = this.physics.add.sprite(150, 700, 'player').setScale(1.5);
+    player = this.physics.add.sprite(150, 800, 'player').setScale(1.5);
     player.setBounce(0.1);
     player.setCollideWorldBounds(true);
 
@@ -569,6 +603,7 @@ const gameScene = {
     this.physics.add.collider(key, platforms);
     this.physics.add.collider(key, ground);
     this.physics.add.collider(door, platforms);
+    this.physics.add.collider(door, ground);
 
     function playerDies(player, enemy) {
       player.disableBody(true, true);
@@ -612,10 +647,10 @@ const gameScene = {
             door.destroy();
             collectedKey = false;
             level += 1;
-            if (level < 5) {
+            if (level <= 5) {
               this.scene.start('NextLevel');
             } else {
-              this.scene.start('GameOver');
+              this.scene.start('GameWin');
             }
           },
           [],
@@ -642,6 +677,7 @@ const gameScene = {
 
   update: function () {
     cursors = this.input.keyboard.createCursorKeys();
+
     //player moveset
     if (cursors.left.isDown || aKey.isDown) {
       player.setVelocityX(-160);
@@ -678,14 +714,6 @@ const gameScene = {
       player.anims.play('jump', true);
     }
 
-    //player death
-    // if (lives === 0) {
-    //   player.anims.play('death', true);
-    //   // console.log(this.textures.get('death').frames); // Log spritesheet frames data
-
-    //   deathComplete = true;
-    // }
-
     //function for all enemies
     function enemyFollows(enemy, scene) {
       // Enemy animation for following the enemies on the y-axis
@@ -701,45 +729,60 @@ const gameScene = {
         );
       }
 
-      //Knights jumping animation changes at level 3, to disguise itself.
-      if (level < 3) {
-        if (!enemy.body.touching.down && !(enemy.body.velocity.y > 0)) {
-          enemy.anims.play('enemyJump', true);
-        }
-        if (!enemy.body.touching.down && enemy.body.velocity.y > 0) {
-          enemy.anims.play('enemyFall', true);
-        }
-      } else {
-        if (!enemy.body.touching.down && !(enemy.body.velocity.y > 0)) {
-          enemy.anims.play('jump', true);
-        }
-        if (!enemy.body.touching.down && enemy.body.velocity.y > 0) {
-          enemy.anims.play('fall', true);
-        }
+      // enemy jumping animation
+      if (!enemy.body.touching.down && !(enemy.body.velocity.y > 0)) {
+        enemy.anims.play('enemyJump', true);
+      }
+      if (!enemy.body.touching.down && enemy.body.velocity.y > 0) {
+        enemy.anims.play('enemyFall', true);
       }
 
       // Enemy animation for following the enemies on the x-axis
-
-      if (
-        player.body.x < enemy.body.x &&
-        player.body.x + enemy.body.x > 50 &&
-        enemy.body.touching.down
-      ) {
-        enemy.setVelocityX(-enemySpeed * (1 + (level - 1) / 10));
-        enemy.anims.play('enemyRunLeft', true);
-        enemy.setFlipX(true); // Flip the enemy when moving left
-        enemy.body.setSize(enemy.width * 0.43, enemy.height * 0.45);
-        enemy.body.setOffset(enemy.width * 0.42, enemy.height * 0.43);
-      } else if (
-        player.body.x > enemy.body.x &&
-        enemy.body.x - player.body.x < -50 &&
-        enemy.body.touching.down
-      ) {
-        enemy.setVelocityX(enemySpeed * (1 + (level - 1) / 10));
-        enemy.anims.play('enemyRunRight', true);
-        enemy.setFlipX(false); // Flip the enemy when moving right
-        enemy.body.setSize(enemy.width * 0.43, enemy.height * 0.45);
-        enemy.body.setOffset(enemy.width * 0.15, enemy.height * 0.43);
+      if (level < 3) {
+        if (
+          player.body.x < enemy.body.x &&
+          player.body.x + enemy.body.x > 50 &&
+          enemy.body.touching.down
+        ) {
+          enemy.setVelocityX(-enemySpeed * (1 + (level - 1) / 10));
+          enemy.anims.play('enemyRunLeft', true);
+          enemy.setFlipX(true); // Flip the enemy when moving left
+          enemy.body.setSize(enemy.width * 0.43, enemy.height * 0.45);
+          enemy.body.setOffset(enemy.width * 0.42, enemy.height * 0.43);
+        } else if (
+          player.body.x > enemy.body.x &&
+          enemy.body.x - player.body.x < -50 &&
+          enemy.body.touching.down
+        ) {
+          enemy.setVelocityX(enemySpeed * (1 + (level - 1) / 10));
+          enemy.anims.play('enemyRunRight', true);
+          enemy.setFlipX(false); // Flip the enemy when moving right
+          enemy.body.setSize(enemy.width * 0.43, enemy.height * 0.45);
+          enemy.body.setOffset(enemy.width * 0.15, enemy.height * 0.43);
+        }
+      } else {
+        //Knights jumping animation changes at level 3, to disguise itself.
+        if (
+          player.body.x < enemy.body.x &&
+          player.body.x + enemy.body.x > 50 &&
+          enemy.body.touching.down
+        ) {
+          enemy.setVelocityX(-enemySpeed * (1 + (level - 1) / 10));
+          enemy.anims.play('left', true);
+          enemy.setFlipX(true); // Flip the enemy when moving left
+          enemy.body.setSize(enemy.width * 0.43, enemy.height * 0.45);
+          enemy.body.setOffset(enemy.width * 0.42, enemy.height * 0.43);
+        } else if (
+          player.body.x > enemy.body.x &&
+          enemy.body.x - player.body.x < -50 &&
+          enemy.body.touching.down
+        ) {
+          enemy.setVelocityX(enemySpeed * (1 + (level - 1) / 10));
+          enemy.anims.play('right', true);
+          enemy.setFlipX(false); // Flip the enemy when moving right
+          enemy.body.setSize(enemy.width * 0.43, enemy.height * 0.45);
+          enemy.body.setOffset(enemy.width * 0.15, enemy.height * 0.43);
+        }
       }
     }
 

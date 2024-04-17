@@ -29,6 +29,13 @@ Mage Hopper is an exciting platformer game where you navigate through levels, co
 ![Game Instructions](./img/instructions_page_2.png)
 ![Game Instructions](./img/instructions_page_3.png)
 
+## Technologies Used
+
+- HTML
+- CSS
+- JavaScript
+- Phaser.js
+
 ## Credits
 
 - Created by Richard Schleckser

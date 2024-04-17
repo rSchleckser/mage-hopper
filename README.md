@@ -18,7 +18,13 @@ Mage Hopper is an exciting platformer game where you navigate through levels, co
 ## Screenshots
 
 ![Main Menu Screenshot](./img/Main_Menu.png)
+
+## GamePlay
+
 ![Gameplay Screenshot](./img/GamePlay.png)
+
+## Preview Instructions
+
 ![Game Instructions](./img/instructions_page_1.png)
 ![Game Instructions](./img/instructions_page_2.png)
 ![Game Instructions](./img/instructions_page_3.png)

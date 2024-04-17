@@ -343,12 +343,6 @@ const gameScene = {
     for (let i = 1; i <= 7; i++) {
       this.load.image('enemyJump' + i, './Knight/Jump/jump' + i + '.png');
     }
-
-    //Load Death animation frames
-    this.load.spritesheet('death', './Mage/newDeath.png', {
-      frameWidth: 32,
-      frameHeight: 32,
-    });
   },
 
   create: function () {
@@ -557,14 +551,6 @@ const gameScene = {
       frames: [jumpFrames[5]],
       frameRate: 4,
       repeat: -1,
-    });
-
-    //death animation
-    this.anims.create({
-      key: 'death',
-      frames: this.anims.generateFrameNumbers('death', { start: 0, end: 59 }),
-      frameRate: 10,
-      repeat: 0,
     });
 
     // enemy base animation

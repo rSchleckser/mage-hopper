@@ -17,19 +17,10 @@ const menuScene = {
   key: 'Menu',
 
   preload: function () {
-    const instructionPages = [
-      { page: 'Page1', image: './img/instructions_page_1.png' },
-      { page: 'Page2', image: './img/instructions_page_2.png' },
-      { page: 'Page3', image: './img/instructions_page_3.png' },
-    ];
     this.load.image('background', './img/nature_background.jpg');
-    this.load.image(instructionPages[0].page, instructionPages[0].image);
-    this.load.image(instructionPages[1].page, instructionPages[1].image);
-    this.load.image(instructionPages[2].page, instructionPages[2].image);
-
-    //   this.load.image('Page1', './img/instructions_page_1.png');
-    //   this.load.image('Page1', './img/instructions_page_1.png');
-    //   this.load.image('Page3', './img/instructions_page_3.png');
+    this.load.image('Page1', './img/instructions_page_1.png');
+    this.load.image('Page2', './img/instructions_page_2.png');
+    this.load.image('Page3', './img/instructions_page_3.png');
   },
 
   create: function () {
@@ -254,6 +245,66 @@ const levelWinScene = {
     nextLevel.setInteractive().on('pointerout', () => {
       nextLevel.setShadow(0, 0, 'rgba(0,0,0,0.5)', 1);
       nextLevel.setColor('rgb(0,0,0)');
+    });
+  },
+};
+const gameWinScene = {
+  key: 'GameWin',
+  preload: function () {},
+  create: function () {
+    this.add.text(600, 200, 'Congratulations!!', {
+      fontSize: '72px',
+      fill: '#fff',
+    });
+    this.add.text(600, 300, 'You Won the Game!', {
+      fontSize: '72px',
+      fill: '#fff',
+    });
+
+    const playAgain = this.add
+      .text(700, 450, 'Play Again?', {
+        fontSize: '48px',
+        fill: '#fff',
+        fontFamily: 'Roboto',
+      })
+      .setInteractive();
+
+    playAgain.on('pointerdown', () => {
+      this.scene.start('Game'); // Transition to game scene
+      lives = 3;
+      level = 1;
+    });
+
+    playAgain.setInteractive().on('pointerover', () => {
+      playAgain.setShadow(2, 2, 'rgba(42, 145, 113,0.5)', 2);
+      playAgain.setColor('rgba(42, 145, 145,0.9)');
+    });
+    playAgain.setInteractive().on('pointerout', () => {
+      playAgain.setShadow(0, 0, 'rgba(0,0,0,0.5)', 1);
+      playAgain.setColor('rgb(255,255,255)');
+    });
+
+    const quit = this.add
+      .text(1000, 450, 'Main Menu', {
+        fontSize: '48px',
+        fill: '#fff',
+        fontFamily: 'Roboto',
+      })
+      .setInteractive();
+
+    quit.on('pointerdown', () => {
+      this.scene.start('Menu'); // Transition to game scene
+    });
+    console.log('Initial size:', quit.displayWidth, quit.displayHeight);
+    console.log('Initial offset:', quit.x, quit.y);
+
+    quit.setInteractive().on('pointerover', () => {
+      quit.setShadow(2, 2, 'rgba(42, 145, 113,0.5)', 2);
+      quit.setColor('rgba(42, 145, 145,0.9)');
+    });
+    quit.setInteractive().on('pointerout', () => {
+      quit.setShadow(0, 0, 'rgba(0,0,0,0.5)', 1);
+      quit.setColor('rgb(255,255,255)');
     });
   },
 };
@@ -561,7 +612,11 @@ const gameScene = {
             door.destroy();
             collectedKey = false;
             level += 1;
-            this.scene.start('NextLevel');
+            if (level < 5) {
+              this.scene.start('NextLevel');
+            } else {
+              this.scene.start('GameOver');
+            }
           },
           [],
           this
@@ -710,7 +765,7 @@ const config = {
       debug: false, // Set to true to see physics bodies
     },
   },
-  scene: [menuScene, gameScene, gameOverScene, levelWinScene],
+  scene: [menuScene, gameScene, gameOverScene, levelWinScene, gameWinScene],
   // scene: {
   //   preload: preload,
   //   create: create,

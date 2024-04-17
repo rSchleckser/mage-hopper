@@ -248,23 +248,26 @@ const levelWinScene = {
 };
 const gameWinScene = {
   key: 'GameWin',
-  preload: function () {},
+  preload: function () {
+    this.load.image('background', './img/nature_background.jpg');
+  },
   create: function () {
+    this.add.image(1000, 400, 'background');
     this.add.text(700, 200, 'Congratulations!!', {
       fontSize: '72px',
       fontFamily: 'Augustine',
-      fill: '#fff',
+      fill: 'rgba(90, 145, 145)',
     });
     this.add.text(675, 300, 'You Won the Game!', {
       fontSize: '72px',
       fontFamily: 'Augustine',
-      fill: '#fff',
+      fill: 'rgb(90, 145, 145)',
     });
 
     const playAgain = this.add
       .text(700, 450, 'Play Again?', {
         fontSize: '48px',
-        fill: '#fff',
+        fill: '#000',
         fontFamily: 'Roboto',
       })
       .setInteractive();
@@ -281,13 +284,13 @@ const gameWinScene = {
     });
     playAgain.setInteractive().on('pointerout', () => {
       playAgain.setShadow(0, 0, 'rgba(0,0,0,0.5)', 1);
-      playAgain.setColor('rgb(255,255,255)');
+      playAgain.setColor('rgb(0,0,0)');
     });
 
     const quit = this.add
       .text(1000, 450, 'Main Menu', {
         fontSize: '48px',
-        fill: '#fff',
+        fill: '#000',
         fontFamily: 'Roboto',
       })
       .setInteractive();
@@ -304,7 +307,7 @@ const gameWinScene = {
     });
     quit.setInteractive().on('pointerout', () => {
       quit.setShadow(0, 0, 'rgba(0,0,0,0.5)', 1);
-      quit.setColor('rgb(255,255,255)');
+      quit.setColor('rgb(0,0,0)');
     });
   },
 };

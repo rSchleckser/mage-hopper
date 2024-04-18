@@ -34,7 +34,7 @@ Mage Hopper is an exciting platformer game where you navigate through levels, co
 - HTML
 - CSS
 - JavaScript
-- Phaser.js
+- Phaser
 
 ## Credits
 

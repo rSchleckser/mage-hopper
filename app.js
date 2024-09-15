@@ -497,9 +497,21 @@ const gameScene = {
 
     //set up jumping animation frames
     let jumpFrames = [];
-    for (let i = 1; i <= 7; i++) {
+    for (let i = 1; i <= 3; i++) {
       jumpFrames.push({ key: 'jump' + i });
     }
+
+    //peak frame for jumping animation
+    let peakFrame = [{key: 'jump4'}];
+
+    // player fall animation
+    let fallFrames =[];
+    for (let i = 5; i <= 7 ; i++) {
+      fallFrames.push({ key: 'jump' + i });
+    }
+
+    let lastFallFrame = [{key: 'jump6'}]
+    let landing = [{key: 'jump7'}]
 
     let enemyJumpFrames = [];
     for (let i = 1; i <= 7; i++) {
@@ -540,18 +552,42 @@ const gameScene = {
     //jump animation
     this.anims.create({
       key: 'jump',
-      frames: [jumpFrames[1]],
-      frameRate: 4,
-      repeat: -1,
+      frames: jumpFrames,
+      frameRate: 10,
+      repeat: 0,
     });
+
+    // peak animation
+    this.anims.create({
+      key: 'peak',
+      frames: peakFrame,
+      frameRate: 1,
+      repeat: 0,
+    })
 
     //fall animation
     this.anims.create({
       key: 'fall',
-      frames: [jumpFrames[5]],
-      frameRate: 4,
-      repeat: -1,
+      frames: fallFrames,
+      frameRate: 10,
+      repeat: 0,
     });
+
+    // last fall frame
+    this.anims.create({
+      key: 'lastFallFrame',
+      frames: lastFallFrame,
+      frameRate:1,
+      repeat:0
+    })
+
+    // Landing
+    this.anims.create({
+      key: 'landing',
+      frames: landing,
+      frameRate: 10,
+      repeat: 0
+    })
 
     // enemy base animation
     this.anims.create({
@@ -684,31 +720,31 @@ const gameScene = {
   update: function () {
     cursors = this.input.keyboard.createCursorKeys();
 
-    //player moveset
+    // player horizontal movement
     if (cursors.left.isDown || aKey.isDown) {
       player.setVelocityX(-160);
-      player.anims.play('left', true);
+      // Play running left animation only if the player is on the ground
+      if (player.body.touching.down) {
+        player.anims.play('left', true);
+      }
       player.setFlipX(true); // Flip the player when moving left
       player.body.setSize(player.width * 0.43, player.height * 0.45);
       player.body.setOffset(player.width * 0.42, player.height * 0.43);
     } else if (cursors.right.isDown || dKey.isDown) {
-      //player animation
       player.setVelocityX(160);
-      player.anims.play('right', true);
+      // Play running right animation only if the player is on the ground
+      if (player.body.touching.down) {
+        player.anims.play('right', true);
+      }
       player.setFlipX(false); // Reset flip when moving right
       player.body.setSize(player.width * 0.43, player.height * 0.45);
       player.body.setOffset(player.width * 0.15, player.height * 0.43);
     } else {
+      // If no horizontal movement, stop velocity and show idle animation
       player.setVelocityX(0);
-      player.anims.play('turn');
-    }
-
-    // modified jumping animation to check for rising and falling condition
-    if (!player.body.touching.down && !(player.body.velocity.y > 0)) {
-      player.anims.play('jump', true);
-    }
-    if (!player.body.touching.down && player.body.velocity.y > 0) {
-      player.anims.play('fall', true);
+      if (player.body.touching.down) {
+        player.anims.play('turn');
+      }
     }
 
     // player jump animation
@@ -719,7 +755,19 @@ const gameScene = {
       player.setVelocityY(-350);
       player.anims.play('jump', true);
     }
-
+    
+    // modified jumping animation to check for rising and falling condition
+    if (!player.body.touching.down && player.body.velocity.y === 0) {
+      player.anims.play('peak', true);
+    }
+    if (!player.body.touching.down && player.body.velocity.y > 0) {
+        player.anims.play('fall', true);
+        if(!player.body.touching.down){
+          player.anims.play('lastFallFrame', true)
+        } 
+          // player.anims.play('landing', true)  
+    } 
+    
     //function for all enemies
     function enemyFollows(enemy, scene) {
       // Enemy animation for following the enemies on the y-axis
@@ -811,7 +859,7 @@ const config = {
     default: 'arcade',
     arcade: {
       gravity: { y: 300 }, // Set gravity
-      debug: false, // Set to true to see physics bodies
+      debug: true, // Set to true to see physics bodies
     },
   },
   scene: [menuScene, gameScene, gameOverScene, levelWinScene, gameWinScene],

@@ -2,6 +2,10 @@
 
 Mage Hopper is an exciting platformer game where you navigate through levels, collect keys, and avoid enemies to progress.
 
+**Play the game [here](https://rschleckser.github.io/mage-hopper/)**
+
+
+
 ## Instructions
 
 1. **Start Game**: Click on "Start Game" to begin playing.
@@ -39,3 +43,6 @@ Mage Hopper is an exciting platformer game where you navigate through levels, co
 ## Credits
 
 - Created by Richard Schleckser
+
+
+

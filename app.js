@@ -1,4 +1,5 @@
 let player;
+let fireProjectile;
 let lives = 3;
 let level = 1;
 let enemy;
@@ -10,6 +11,42 @@ let platforms;
 let door;
 let key;
 let collectedKey = false;
+
+class Projectile extends Phaser.Physics.Arcade.Sprite{
+  constructor(scene, x, y){
+    super(scene, x, y, 'fire');
+  }
+
+  fire(x,y){
+    this.body.reset(x, y);
+
+    this.setActive(true);
+    this.setVisible(true);
+    this.setVelocityX(200);
+  }
+}
+
+class ProjectileGroup extends Phaser.Physics.Arcade.Group{
+  constructor(scene){
+    super(scene.physics.world, scene);
+
+    this.createMultiple({
+      classType: Fire,
+      frameQuantity: 30, 
+      active: false,
+      visible: false,
+      key: 'fire',
+    })
+  }
+
+  fireProjectile(x,y){
+    const projectile = this.getFirstDead(false)
+    if(projectile){
+      projectile.fire(x,y)
+    }
+  }
+
+}
 
 const menuScene = {
   key: 'Menu',
@@ -315,6 +352,7 @@ const gameWinScene = {
 const gameScene = {
   key: 'Game',
 
+
   preload: function () {
     this.load.image('background', './img/nature_background.jpg');
     this.load.image('platform', './img/grass_platform.png');
@@ -342,6 +380,15 @@ const gameScene = {
     //load enemy jumping frames
     for (let i = 1; i <= 7; i++) {
       this.load.image('enemyJump' + i, './Knight/Jump/jump' + i + '.png');
+    }
+
+    //Load attack animation
+    for (let i = 1; i <= 7; i++) {
+      this.load.image('attack' + i, './Mage/Attack/attack' + i + '.png');
+    }
+    // Load Fire animation
+    for (let i = 1; i <= 9; i++) {
+      this.load.image('fire' + i, './Mage/Fire/fire' + i + '.png');
     }
   },
 
@@ -458,6 +505,7 @@ const gameScene = {
     player.setBounce(0.1);
     player.setCollideWorldBounds(true);
 
+
     //fix player collision-box origin and size
     player.body.setSize(player.width * 0.43, player.height * 0.45);
     player.body.setOffset(player.width * 0.15, player.height * 0.43);
@@ -502,16 +550,26 @@ const gameScene = {
     }
 
     //peak frame for jumping animation
-    let peakFrame = [{key: 'jump4'}];
+    let peakFrame = [{ key: 'jump4' }];
 
     // player fall animation
-    let fallFrames =[];
-    for (let i = 5; i <= 7 ; i++) {
+    let fallFrames = [];
+    for (let i = 5; i <= 7; i++) {
       fallFrames.push({ key: 'jump' + i });
     }
 
-    let lastFallFrame = [{key: 'jump6'}]
-    let landing = [{key: 'jump7'}]
+    let lastFallFrame = [{ key: 'jump6' }];
+    let landing = [{ key: 'jump7' }];
+
+    let attackFrames = [];
+    for (let i = 1; i <= 7; i++) {
+      attackFrames.push({ key: 'attack' + i });
+    }
+
+    let fireFrames = [];
+    for (let i = 1; i <= 9; i++) {
+      fireFrames.push({ key: 'fire' + i });
+    }
 
     let enemyJumpFrames = [];
     for (let i = 1; i <= 7; i++) {
@@ -563,7 +621,7 @@ const gameScene = {
       frames: peakFrame,
       frameRate: 1,
       repeat: 0,
-    })
+    });
 
     //fall animation
     this.anims.create({
@@ -577,17 +635,33 @@ const gameScene = {
     this.anims.create({
       key: 'lastFallFrame',
       frames: lastFallFrame,
-      frameRate:1,
-      repeat:0
-    })
+      frameRate: 1,
+      repeat: 0,
+    });
 
     // Landing
     this.anims.create({
       key: 'landing',
       frames: landing,
+      frameRate: 1,
+      repeat: 0,
+    });
+
+    // attack animation
+    this.anims.create({
+      key: 'attack',
+      frames: attackFrames,
       frameRate: 10,
-      repeat: 0
-    })
+      repeat: 0,
+    });
+
+    // fire animation
+    this.anims.create({
+      key: 'fire',
+      frames: [fireFrames[1]],
+      frameRate: 10,
+      repeat: 0,
+    });
 
     // enemy base animation
     this.anims.create({
@@ -678,6 +752,9 @@ const gameScene = {
       key.destroy();
     }
 
+
+    
+
     function enterDoor(player, door) {
       if (collectedKey === true) {
         // Create a fade-out effect
@@ -701,6 +778,13 @@ const gameScene = {
       }
     }
 
+        //key commands
+    wKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W);
+    sKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S);
+    aKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A);
+    dKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D);
+    fKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F);
+
     //PLayers dies and respawns
     this.physics.add.collider(player, enemy, playerDies, null, this);
     this.physics.add.collider(player, enemy2, playerDies, null, this);
@@ -710,64 +794,171 @@ const gameScene = {
     //player enters the door with key
     this.physics.add.overlap(player, door, enterDoor, null, this);
 
-    //key commands
-    wKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W);
-    sKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S);
-    aKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A);
-    dKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D);
+
+
+    playerState = 'idle'; // Initial player state
   },
 
   update: function () {
     cursors = this.input.keyboard.createCursorKeys();
 
-    // player horizontal movement
-    if (cursors.left.isDown || aKey.isDown) {
+    switch (playerState) {
+      case 'idle':
+        handleIdleState();
+        break;
+      case 'running':
+        handleRunningState();
+        break;
+      case 'jumping':
+        handleJumpingState();
+        break;
+      case 'falling':
+        handleFallingState();
+        break;
+      case 'attacking':
+        handleAttackingState();
+        break;
+    }
+
+    handleStateTransitions();
+
+    function moveLeft() {
       player.setVelocityX(-160);
-      // Play running left animation only if the player is on the ground
-      if (player.body.touching.down) {
-        player.anims.play('left', true);
-      }
       player.setFlipX(true); // Flip the player when moving left
       player.body.setSize(player.width * 0.43, player.height * 0.45);
       player.body.setOffset(player.width * 0.42, player.height * 0.43);
-    } else if (cursors.right.isDown || dKey.isDown) {
+    }
+
+    function moveRight() {
       player.setVelocityX(160);
-      // Play running right animation only if the player is on the ground
-      if (player.body.touching.down) {
-        player.anims.play('right', true);
-      }
       player.setFlipX(false); // Reset flip when moving right
       player.body.setSize(player.width * 0.43, player.height * 0.45);
       player.body.setOffset(player.width * 0.15, player.height * 0.43);
-    } else {
-      // If no horizontal movement, stop velocity and show idle animation
+    }
+
+    // Handle Idle State
+    function handleIdleState() {
       player.setVelocityX(0);
-      if (player.body.touching.down) {
-        player.anims.play('turn');
+      player.anims.play('turn', true);
+
+      // Transitions to running
+      if (cursors.left.isDown || aKey.isDown) {
+        playerState = 'running';
+      } else if (cursors.right.isDown || dKey.isDown) {
+        playerState = 'running';
+      }
+      // Transition to jumping
+      if ((cursors.up.isDown || wKey.isDown) && player.body.touching.down) {
+        playerState = 'jumping';
+      }
+      // Transition to attacking
+      if (fKey.isDown) {
+        playerState = 'attacking';
       }
     }
 
-    // player jump animation
-    if (
-      (cursors.up.isDown && player.body.touching.down) ||
-      (wKey.isDown && player.body.touching.down)
-    ) {
-      player.setVelocityY(-350);
-      player.anims.play('jump', true);
+    //Handle Running State
+    function handleRunningState() {
+      if (cursors.left.isDown || aKey.isDown) {
+        player.setVelocityX(-160);
+        // Play running left animation only if the player is on the ground
+        if (player.body.touching.down) {
+          player.anims.play('left', true);
+        }
+        player.setFlipX(true); // Flip the player when moving left
+        player.body.setSize(player.width * 0.43, player.height * 0.45);
+        player.body.setOffset(player.width * 0.42, player.height * 0.43);
+      } else if (cursors.right.isDown || dKey.isDown) {
+        player.setVelocityX(160);
+        // Play running right animation only if the player is on the ground
+        if (player.body.touching.down) {
+          player.anims.play('right', true);
+        }
+        player.setFlipX(false); // Reset flip when moving right
+        player.body.setSize(player.width * 0.43, player.height * 0.45);
+        player.body.setOffset(player.width * 0.15, player.height * 0.43);
+      }
+
+      // Transition to idle
+      if (!aKey.isDown && !dKey.isDown) {
+        playerState = 'idle';
+      }
+      // Transition to jumping
+      if ((cursors.up.isDown || wKey.isDown) && player.body.touching.down) {
+        playerState = 'jumping';
+      }
+      // Transition to attacking
+      if (fKey.isDown) {
+        playerState = 'attacking';
+      }
     }
-    
-    // modified jumping animation to check for rising and falling condition
-    if (!player.body.touching.down && player.body.velocity.y === 0) {
-      player.anims.play('peak', true);
+
+    function handleJumpingState() {
+      if (
+        (cursors.up.isDown && player.body.touching.down) ||
+        (wKey.isDown && player.body.touching.down)
+      ) {
+        player.setVelocityY(-350);
+        player.anims.play('jump', true);
+      }
+
+      if (cursors.left.isDown || aKey.isDown) {
+        moveLeft();
+      } else if (cursors.right.isDown || dKey.isDown) {
+        moveRight();
+      }
+
+      // modified jumping animation to check for rising and falling condition
+      if (!player.body.touching.down && player.body.velocity.y === 0) {
+        player.anims.play('peak', true);
+      }
     }
-    if (!player.body.touching.down && player.body.velocity.y > 0) {
+
+    function handleFallingState() {
+      if (!player.body.touching.down && player.body.velocity.y > 0) {
         player.anims.play('fall', true);
-        if(!player.body.touching.down){
-          player.anims.play('lastFallFrame', true)
-        } 
-          // player.anims.play('landing', true)  
-    } 
+        if (!player.body.touching.down) {
+          player.anims.play('lastFallFrame', true);
+        }
+      }
+
+      if (player.body.touching.down && (aKey.isDown || dKey.isDown)) {
+        playerState = 'running';
+      } else if (player.body.touching.down) {
+        playerState = 'idle';
+      }
+    }
+
+    function handleAttackingState() {
+      // Play the attack animation
+      player.anims.play('attack', true);
+      player.setVelocityX(0); 
     
+      // Listen for animation completion
+      player.once('animationcomplete-attack', () => {
+        playerState = 'idle'; 
+      });
+    }
+    
+
+
+    
+    
+    // Handle State Transitions
+    function handleStateTransitions() {
+      // Transition from jumping to falling
+      if (playerState === 'jumping' && player.body.velocity.y > 0) {
+        playerState = 'falling';
+      }
+
+      // Transition from falling to idle (when landing)
+      if (playerState === 'falling' && player.body.touching.down) {
+        playerState = 'idle';
+      }
+    }
+
+
+
     //function for all enemies
     function enemyFollows(enemy, scene) {
       // Enemy animation for following the enemies on the y-axis

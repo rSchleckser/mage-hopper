@@ -352,7 +352,6 @@ const gameWinScene = {
 const gameScene = {
   key: 'Game',
 
-
   preload: function () {
     this.load.image('background', './img/nature_background.jpg');
     this.load.image('platform', './img/grass_platform.png');
@@ -753,8 +752,6 @@ const gameScene = {
     }
 
 
-    
-
     function enterDoor(player, door) {
       if (collectedKey === true) {
         // Create a fade-out effect
@@ -941,9 +938,6 @@ const gameScene = {
     }
     
 
-
-    
-    
     // Handle State Transitions
     function handleStateTransitions() {
       // Transition from jumping to falling
@@ -956,7 +950,6 @@ const gameScene = {
         playerState = 'idle';
       }
     }
-
 
 
     //function for all enemies
@@ -1050,7 +1043,7 @@ const config = {
     default: 'arcade',
     arcade: {
       gravity: { y: 300 }, // Set gravity
-      debug: true, // Set to true to see physics bodies
+      debug: false, // Set to true to see physics bodies
     },
   },
   scene: [menuScene, gameScene, gameOverScene, levelWinScene, gameWinScene],

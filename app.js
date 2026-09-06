@@ -142,6 +142,20 @@ class SlamWave extends Phaser.Physics.Arcade.Sprite{
     super(scene, x, y, 'fireExtra1');
   }
 
+  refreshHitbox(){
+    if (!this.body) return;
+    // Source art is 128x128; keep a tight leading-edge hitbox (scale applies on top)
+    const w = 40;
+    const h = 52;
+    this.body.setSize(w, h);
+    // Bias toward the crescent tip so we don't wipe enemies behind the wave
+    if (this.flipX) {
+      this.body.setOffset(10, 38);
+    } else {
+      this.body.setOffset(128 - w - 10, 38);
+    }
+  }
+
   despawn(){
     this.off('animationcomplete-fireExtraTravel');
     this.off('animationcomplete-fireExtraImpact');
@@ -149,6 +163,7 @@ class SlamWave extends Phaser.Physics.Arcade.Sprite{
     this.setActive(false);
     this.setVisible(false);
     this.setData('impacting', false);
+    this.setVelocity(0, 0);
     if (this.body) {
       this.body.stop();
       this.body.enable = false;
@@ -161,17 +176,20 @@ class SlamWave extends Phaser.Physics.Arcade.Sprite{
     this.setAlpha(1);
     this.setDepth(50);
     this.setData('impacting', false);
+    this.setTexture('fireExtra1');
+    this.setScale(2.6);
+    this.setFlipX(dir < 0);
+
     if (this.body) {
       this.body.enable = true;
-      this.body.reset(x, y);
       this.body.allowGravity = false;
       if (this.body.setAllowGravity) this.body.setAllowGravity(false);
+      this.body.reset(x, y);
     }
-    this.setScale(2.6);
-    this.setVelocityY(0);
+    this.refreshHitbox();
     this.setAcceleration(0, 0);
+    this.setVelocityY(0);
     this.setVelocityX(dir * 360);
-    this.setFlipX(dir < 0);
 
     // fire_extra1..3, then freeze on fire_extra3 while traveling
     this.off('animationcomplete-fireExtraTravel');
@@ -180,13 +198,24 @@ class SlamWave extends Phaser.Physics.Arcade.Sprite{
       if (!this.active || this.getData('impacting')) return;
       if (this.anims) this.anims.stop();
       this.setTexture('fireExtra3');
+      this.setScale(2.6);
       this.setVisible(true);
       this.setAlpha(1);
+      // setTexture can reset body size — restore the travel hitbox
+      if (this.body && !this.getData('impacting')) {
+        this.body.enable = true;
+        this.refreshHitbox();
+        // Keep moving in the same direction
+        const speed = 360;
+        this.setVelocityX(this.flipX ? -speed : speed);
+        this.setVelocityY(0);
+      }
     });
     if (this.anims) {
       this.anims.play('fireExtraTravel', true);
     } else {
       this.setTexture('fireExtra3');
+      this.refreshHitbox();
     }
   }
 
@@ -194,6 +223,7 @@ class SlamWave extends Phaser.Physics.Arcade.Sprite{
     if (this.getData('impacting')) return;
     this.setData('impacting', true);
     this.setVelocity(0, 0);
+    this.setAcceleration(0, 0);
     if (this.body) {
       this.body.stop();
       this.body.enable = false;
@@ -203,14 +233,13 @@ class SlamWave extends Phaser.Physics.Arcade.Sprite{
     this.setVisible(true);
     this.setAlpha(1);
     this.setDepth(50);
+    this.setScale(2.6);
 
-    // Play the rest (fire_extra4..9), then vanish
     this.once('animationcomplete-fireExtraImpact', () => {
       this.despawn();
     });
     if (this.anims) {
       this.anims.stop();
-      // Must play a different anim than the paused travel clip so frames actually advance
       this.anims.play('fireExtraImpact', true);
     } else {
       this.despawn();
@@ -227,6 +256,14 @@ class SlamWaveGroup extends Phaser.Physics.Arcade.Group{
       active: false,
       visible: false,
       key: 'fireExtra1',
+    });
+    // Pooled waves must not collide until launched
+    this.children.each((wave) => {
+      if (wave.body) {
+        wave.body.enable = false;
+      }
+      wave.setActive(false);
+      wave.setVisible(false);
     });
   }
 }
@@ -785,9 +822,21 @@ const gameScene = {
     this.physics.add.overlap(this.fireballs, enemy, hitEnemyWithFire, null, this);
     this.physics.add.overlap(this.fireballs, enemy2, hitEnemyWithFire, null, this);
     this.physics.add.overlap(this.fireballs, enemy3, hitEnemyWithFire, null, this);
-    this.physics.add.overlap(this.slamWaves, enemy, hitEnemyWithSlamWave, null, this);
-    this.physics.add.overlap(this.slamWaves, enemy2, hitEnemyWithSlamWave, null, this);
-    this.physics.add.overlap(this.slamWaves, enemy3, hitEnemyWithSlamWave, null, this);
+    const slamWaveCanHit = (wave, enemyHit) => {
+      return (
+        !!wave &&
+        wave.active &&
+        !wave.getData('impacting') &&
+        !!wave.body &&
+        wave.body.enable &&
+        !!enemyHit &&
+        enemyHit.active &&
+        !enemyHit.getData('defeated')
+      );
+    };
+    this.physics.add.overlap(this.slamWaves, enemy, hitEnemyWithSlamWave, slamWaveCanHit, this);
+    this.physics.add.overlap(this.slamWaves, enemy2, hitEnemyWithSlamWave, slamWaveCanHit, this);
+    this.physics.add.overlap(this.slamWaves, enemy3, hitEnemyWithSlamWave, slamWaveCanHit, this);
 
     // Reset level-exit / i-frame flags for a fresh scene start
     this.isExitingLevel = false;

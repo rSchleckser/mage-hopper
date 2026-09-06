@@ -12,6 +12,73 @@ let door;
 let key;
 let collectedKey = false;
 
+// --- Mobile / touch input ---
+const touchInput = { left: false, right: false, up: false, attack: false };
+
+function isTouchDevice() {
+  return (
+    window.matchMedia("(pointer: coarse)").matches ||
+    "ontouchstart" in window ||
+    (navigator.maxTouchPoints || 0) > 0
+  );
+}
+
+function bindHoldButton(el, key) {
+  if (!el) return;
+  const set = (down, event) => {
+    if (event) event.preventDefault();
+    touchInput[key] = down;
+    el.classList.toggle("pressed", down);
+  };
+  el.addEventListener("pointerdown", (e) => {
+    el.setPointerCapture?.(e.pointerId);
+    set(true, e);
+  });
+  el.addEventListener("pointerup", (e) => set(false, e));
+  el.addEventListener("pointercancel", (e) => set(false, e));
+  el.addEventListener("pointerout", (e) => set(false, e));
+  el.addEventListener("lostpointercapture", (e) => set(false, e));
+}
+
+function setMcbileControlsVisible(visible) {
+  const controls = document.getElementById("mobile-controls");
+  if (!controls) return;
+  if (visible && isTouchDevice()) {
+    controls.classList.add("visible");
+    controls.setAttribute("aria-hidden", "false");
+  } else {
+    controls.classList.remove("visible");
+    controls.setAttribute("aria-hidden", "true");
+    touchInput.left = touchInput.right = touchInput.up = touchInput.attack = false;
+    controls.querySelectorAll("button.pressed").forEach((b) => b.classList.remove("pressed"));
+  }
+}
+
+function setupMobileControls() {
+  bindHoldButton(document.getElementById("btn-left"), "left");
+  bindHoldButton(document.getElementById("btn-right"), "right");
+  bindHoldButton(document.getElementById("btn-jump"), "up");
+  bindHoldButton(document.getElementById("btn-attack"), "attack");
+  document.body.addEventListener(
+    "touchmove",
+    (e) => {
+      if (e.target.closest("#mobile-controls") || e.target.tagName === "CANVAS") {
+        e.preventDefault();
+      }
+    },
+    { passive: false }
+  );
+}
+
+function enlargeTextHitArea(textObj, padX = 24, padY = 16) {
+  if (!textObj || !textObj.setInteractive) return textObj;
+  textObj.setInteractive();
+  const b = textObj.getBounds();
+  textObj.input.hitArea.setTo(-padX, -padY, b.width + padX * 2, b.height + padY * 2);
+  return textObj;
+}
+
+
 class Projectile extends Phaser.Physics.Arcade.Sprite{
   constructor(scene, x, y){
     super(scene, x, y, 'fire1');
@@ -58,6 +125,7 @@ const menuScene = {
   },
 
   create: function () {
+    setMobileControlsVisible(false);
     this.add.image(1000, 400, 'background');
 
     //Add title
@@ -73,8 +141,8 @@ const menuScene = {
         fontSize: '32px',
         fill: '#000',
         fontFamily: 'Roboto',
-      })
-      .setInteractive();
+      });
+    enlargeTextHitArea(startGame);
 
     startGame.on('pointerdown', () => {
       this.scene.start('Game'); // Transition to game scene
@@ -95,8 +163,8 @@ const menuScene = {
         fontSize: '32px',
         fill: '#000',
         fontFamily: 'Roboto',
-      })
-      .setInteractive();
+      });
+    enlargeTextHitArea(instructions);
 
     instructions.setInteractive().on('pointerover', () => {
       instructions.setShadow(2, 2, 'rgba(42, 145, 113,0.5)', 2);
@@ -191,6 +259,7 @@ const gameOverScene = {
   key: 'GameOver',
   preload: function () {},
   create: function () {
+    setMobileControlsVisible(false);
     this.add.text(750, 300, 'Game Over!!', { fontSize: '72px', fill: '#fff' });
 
     const playAgain = this.add
@@ -198,8 +267,8 @@ const gameOverScene = {
         fontSize: '48px',
         fill: '#fff',
         fontFamily: 'Roboto',
-      })
-      .setInteractive();
+      });
+    enlargeTextHitArea(playAgain, 28, 20);
 
     playAgain.on('pointerdown', () => {
       this.scene.start('Game'); // Transition to game scene
@@ -221,8 +290,8 @@ const gameOverScene = {
         fontSize: '48px',
         fill: '#fff',
         fontFamily: 'Roboto',
-      })
-      .setInteractive();
+      });
+    enlargeTextHitArea(quit, 28, 20);
 
     quit.on('pointerdown', () => {
       lives = 3;
@@ -247,6 +316,7 @@ const levelWinScene = {
     this.load.image('Background', './img/nature_background.jpg');
   },
   create: function () {
+    setMobileControlsVisible(false);
     this.add.image(1000, 400, 'Background');
     this.add.text(730, 250, `Congratulations!!`, {
       fontFamily: 'Augustine',
@@ -267,8 +337,8 @@ const levelWinScene = {
         fontFamily: 'Roboto',
         fontSize: '48px',
         fill: '#000',
-      })
-      .setInteractive();
+      });
+    enlargeTextHitArea(nextLevel, 28, 20);
 
     nextLevel.on('pointerdown', () => {
       this.scene.start('Game'); // Transition to game scene
@@ -291,6 +361,7 @@ const gameWinScene = {
     this.load.image('background', './img/nature_background.jpg');
   },
   create: function () {
+    setMobileControlsVisible(false);
     this.add.image(1000, 400, 'background');
     this.add.text(700, 200, 'Congratulations!!', {
       fontSize: '72px',
@@ -308,8 +379,8 @@ const gameWinScene = {
         fontSize: '48px',
         fill: '#000',
         fontFamily: 'Roboto',
-      })
-      .setInteractive();
+      });
+    enlargeTextHitArea(playAgain, 28, 20);
 
     playAgain.on('pointerdown', () => {
       this.scene.start('Game'); // Transition to game scene
@@ -331,8 +402,8 @@ const gameWinScene = {
         fontSize: '48px',
         fill: '#000',
         fontFamily: 'Roboto',
-      })
-      .setInteractive();
+      });
+    enlargeTextHitArea(quit, 28, 20);
 
     quit.on('pointerdown', () => {
       this.scene.start('Menu'); // Transition to game scene
@@ -394,6 +465,7 @@ const gameScene = {
   },
 
   create: function () {
+    setMobileControlsVisible(true);
     this.add.image(1000, 400, 'background');
 
     //level indicator
@@ -829,6 +901,10 @@ const gameScene = {
   update: function () {
     const thisScene = this;
     cursors = this.input.keyboard.createCursorKeys();
+    const leftHeld = cursors.left.isDown || aKey.isDown || touchInput.left;
+    const rightHeld = cursors.right.isDown || dKey.isDown || touchInput.right;
+    const upHeld = cursors.up.isDown || wKey.isDown || touchInput.up;
+    const attackHeld = fKey.isDown || touchInput.attack;
 
     switch (playerState) {
       case 'idle':
@@ -870,24 +946,24 @@ const gameScene = {
       player.anims.play('turn', true);
 
       // Transitions to running
-      if (cursors.left.isDown || aKey.isDown) {
+      if (leftHeld) {
         playerState = 'running';
-      } else if (cursors.right.isDown || dKey.isDown) {
+      } else if (rightHeld) {
         playerState = 'running';
       }
       // Transition to jumping
-      if ((cursors.up.isDown || wKey.isDown) && player.body.touching.down) {
+      if (upHeld && player.body.touching.down) {
         playerState = 'jumping';
       }
       // Transition to attacking
-      if (fKey.isDown) {
+      if (attackHeld) {
         playerState = 'attacking';
       }
     }
 
     //Handle Running State
     function handleRunningState() {
-      if (cursors.left.isDown || aKey.isDown) {
+      if (leftHeld) {
         player.setVelocityX(-160);
         // Play running left animation only if the player is on the ground
         if (player.body.touching.down) {
@@ -896,7 +972,7 @@ const gameScene = {
         player.setFlipX(true); // Flip the player when moving left
         player.body.setSize(player.width * 0.43, player.height * 0.45);
         player.body.setOffset(player.width * 0.42, player.height * 0.43);
-      } else if (cursors.right.isDown || dKey.isDown) {
+      } else if (rightHeld) {
         player.setVelocityX(160);
         // Play running right animation only if the player is on the ground
         if (player.body.touching.down) {
@@ -908,31 +984,30 @@ const gameScene = {
       }
 
       // Transition to idle
-      if (!aKey.isDown && !dKey.isDown) {
+      if (!leftHeld && !rightHeld) {
         playerState = 'idle';
       }
       // Transition to jumping
-      if ((cursors.up.isDown || wKey.isDown) && player.body.touching.down) {
+      if (upHeld && player.body.touching.down) {
         playerState = 'jumping';
       }
       // Transition to attacking
-      if (fKey.isDown) {
+      if (attackHeld) {
         playerState = 'attacking';
       }
     }
 
     function handleJumpingState() {
       if (
-        (cursors.up.isDown && player.body.touching.down) ||
-        (wKey.isDown && player.body.touching.down)
+        upHeld && player.body.touching.down
       ) {
         player.setVelocityY(-350);
         player.anims.play('jump', true);
       }
 
-      if (cursors.left.isDown || aKey.isDown) {
+      if (leftHeld) {
         moveLeft();
-      } else if (cursors.right.isDown || dKey.isDown) {
+      } else if (rightHeld) {
         moveRight();
       }
 
@@ -950,7 +1025,7 @@ const gameScene = {
         }
       }
 
-      if (player.body.touching.down && (aKey.isDown || dKey.isDown)) {
+      if (player.body.touching.down && (leftHeld || rightHeld)) {
         playerState = 'running';
       } else if (player.body.touching.down) {
         playerState = 'idle';
@@ -1095,3 +1170,18 @@ const config = {
 };
 
 const game = new Phaser.Game(config);
+
+setupMobileControls();
+window.addEventListener("resize", () => {
+  if (game && game.scale) {
+    game.scale.refresh();
+  }
+});
+window.addEventListener("orientationchange", () => {
+  setTimeout(() => {
+    if (game && game.scale) {
+      game.scale.refresh();
+    }
+  }, 200);
+});
+

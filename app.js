@@ -157,6 +157,18 @@ class SlamWave extends Phaser.Physics.Arcade.Sprite{
     const speed = 360;
     this.setVelocityX(dir * speed);
     this.setFlipX(dir < 0);
+    // Stop and despawn on the last Fire_Extra frame (don't keep drifting)
+    this.off('animationcomplete-fireExtra');
+    this.once('animationcomplete-fireExtra', () => {
+      this.setVelocity(0, 0);
+      this.anims.stop();
+      this.setActive(false);
+      this.setVisible(false);
+      if (this.body) {
+        this.body.stop();
+        this.body.enable = false;
+      }
+    });
     if (this.anims) {
       this.anims.play('fireExtra', true);
     }

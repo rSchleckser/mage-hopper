@@ -1074,13 +1074,13 @@ const gameScene = {
 
         const releaseBoltFromStaff = (anim, frame) => {
           if (!anim || anim.key !== 'attack' || boltReleased) return;
-          // attack has 7 frames (0..6); spawn as she finishes extending (~frame 5)
-          if (frame.index < 5) return;
+          // attack has 7 frames (0..6); release a bit earlier as the staff extends (~frame 3)
+          if (frame.index < 3) return;
           boltReleased = true;
           const facingLeft = player.flipX;
-          // Further out so it reads as leaving the staff tip
-          const spawnX = player.x + (facingLeft ? -95 : 95);
-          const spawnY = player.y - 10;
+          // Closer to the glowing staff tip
+          const spawnX = player.x + (facingLeft ? -58 : 58);
+          const spawnY = player.y - 22;
           const bolt = thisScene.fireballs.getFirstDead(false);
           if (bolt) {
             bolt.fire(spawnX, spawnY, facingLeft ? -1 : 1);

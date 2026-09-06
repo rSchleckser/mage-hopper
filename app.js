@@ -90,11 +90,26 @@ class Projectile extends Phaser.Physics.Arcade.Sprite{
     super(scene, x, y, 'fire1');
   }
 
-  fire(x,y){
-    this.body.reset(x, y);
+  fire(x, y, dir = 1){
     this.setActive(true);
     this.setVisible(true);
-    this.setVelocityX(320);
+    if (this.body) {
+      this.body.enable = true;
+      this.body.reset(x, y);
+      this.body.allowGravity = false;
+      if (this.body.setAllowGravity) this.body.setAllowGravity(false);
+    }
+    // Bigger bolt so it reads next to the scaled mage/knights
+    this.setScale(2.4);
+    this.setVelocityY(0);
+    this.setAcceleration(0, 0);
+    // Straight horizontal flight across the level
+    const speed = 420;
+    this.setVelocityX(dir * speed);
+    this.setFlipX(dir < 0);
+    if (this.anims) {
+      this.anims.play('fire', true);
+    }
   }
 }
 
@@ -612,11 +627,7 @@ const gameScene = {
 
     // Fireball pool (Projectile / ProjectileGroup)
     this.fireballs = new ProjectileGroup(this);
-    this.physics.add.collider(this.fireballs, platforms, (projectile) => {
-      projectile.setActive(false);
-      projectile.setVisible(false);
-      projectile.body.stop();
-    });
+    // Fireballs fly straight; no platform bounce/stop — cleaned up when off-screen
     const hitEnemyWithFire = (projectile, enemyHit) => {
       if (!enemyHit || !enemyHit.active || enemyHit.getData("defeated")) {
         return;
@@ -766,12 +777,12 @@ const gameScene = {
       repeat: 0,
     });
 
-    // fire animation
+    // fire animation — full flame loop while the bolt travels
     this.anims.create({
       key: 'fire',
-      frames: [fireFrames[1]],
-      frameRate: 10,
-      repeat: 0,
+      frames: fireFrames,
+      frameRate: 14,
+      repeat: -1,
     });
 
     // enemy base animation
@@ -1064,9 +1075,7 @@ const gameScene = {
         const spawnY = player.y;
         const bolt = thisScene.fireballs.getFirstDead(false);
         if (bolt) {
-          bolt.fire(spawnX, spawnY);
-          bolt.setFlipX(facingLeft);
-          bolt.setVelocityX(facingLeft ? -320 : 320);
+          bolt.fire(spawnX, spawnY, facingLeft ? -1 : 1);
         }
         player.once('animationcomplete-attack', () => {
           playerState = 'idle';
@@ -1172,6 +1181,22 @@ const gameScene = {
     enemyFollows(enemy, this);
     enemyFollows(enemy2, this);
     enemyFollows(enemy3, this);
+
+    // Keep fireballs on a linear path and recycle when they leave the screen
+    if (thisScene.fireballs) {
+      thisScene.fireballs.children.each((bolt) => {
+        if (!bolt.active || !bolt.body) return;
+        bolt.body.allowGravity = false;
+        bolt.setVelocityY(0);
+        if (bolt.x < -80 || bolt.x > 1970 || bolt.y < -80 || bolt.y > 980) {
+          bolt.anims.stop();
+          bolt.setActive(false);
+          bolt.setVisible(false);
+          bolt.body.stop();
+          bolt.body.enable = false;
+        }
+      });
+    }
   },
 };
 

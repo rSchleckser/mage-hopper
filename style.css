@@ -127,3 +127,13 @@ body {
   touch-action: manipulation;
   cursor: pointer;
 }
+
+#mobile-controls .actions #btn-extra {
+  background: rgba(120, 80, 20, 0.65);
+  font-size: 0.95rem;
+}
+
+#mobile-controls .actions #btn-extra:active,
+#mobile-controls .actions #btn-extra.pressed {
+  background: rgba(180, 120, 40, 0.9);
+}

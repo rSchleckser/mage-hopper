@@ -13,7 +13,7 @@ let key;
 let collectedKey = false;
 
 // --- Mobile / touch input ---
-const touchInput = { left: false, right: false, up: false, attack: false };
+const touchInput = { left: false, right: false, up: false, attack: false, extra: false };
 
 function isTouchDevice() {
   return (
@@ -49,7 +49,7 @@ function setMobileControlsVisible(visible) {
   } else {
     controls.classList.remove("visible");
     controls.setAttribute("aria-hidden", "true");
-    touchInput.left = touchInput.right = touchInput.up = touchInput.attack = false;
+    touchInput.left = touchInput.right = touchInput.up = touchInput.attack = touchInput.extra = false;
     controls.querySelectorAll("button.pressed").forEach((b) => b.classList.remove("pressed"));
   }
 }
@@ -59,6 +59,7 @@ function setupMobileControls() {
   bindHoldButton(document.getElementById("btn-right"), "right");
   bindHoldButton(document.getElementById("btn-jump"), "up");
   bindHoldButton(document.getElementById("btn-attack"), "attack");
+  bindHoldButton(document.getElementById("btn-extra"), "extra");
   document.body.addEventListener(
     "touchmove",
     (e) => {
@@ -490,6 +491,10 @@ const gameScene = {
     for (let i = 1; i <= 4; i++) {
       this.load.image('hurt' + i, './Mage/Hurt/hurt' + i + '.png');
     }
+    // Extra melee staff attack (attack_extra0..6)
+    for (let i = 0; i <= 6; i++) {
+      this.load.image('attackExtra' + i, './Mage/Attack_Extra/attack_extra' + i + '.png');
+    }
   },
 
   create: function () {
@@ -705,6 +710,11 @@ const gameScene = {
       hurtFrames.push({ key: 'hurt' + i });
     }
 
+    let attackExtraFrames = [];
+    for (let i = 0; i <= 6; i++) {
+      attackExtraFrames.push({ key: 'attackExtra' + i });
+    }
+
     let fireFrames = [];
     for (let i = 1; i <= 9; i++) {
       fireFrames.push({ key: 'fire' + i });
@@ -804,6 +814,13 @@ const gameScene = {
     this.anims.create({
       key: 'hurt',
       frames: hurtFrames,
+      frameRate: 10,
+      repeat: 0,
+    });
+
+    this.anims.create({
+      key: 'attackExtra',
+      frames: attackExtraFrames,
       frameRate: 10,
       repeat: 0,
     });
@@ -959,6 +976,7 @@ const gameScene = {
     aKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A);
     dKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D);
     fKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F);
+    eKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E);
 
     //PLayers dies and respawns
     const enemyCanHurtPlayer = (playerObj, enemyObj) =>
@@ -983,6 +1001,7 @@ const gameScene = {
     const rightHeld = cursors.right.isDown || dKey.isDown || touchInput.right;
     const upHeld = cursors.up.isDown || wKey.isDown || touchInput.up;
     const attackHeld = fKey.isDown || touchInput.attack;
+    const extraHeld = (typeof eKey !== 'undefined' && eKey.isDown) || touchInput.extra;
 
     // Let hurt/death anims play without movement stealing control
     if (playerState === 'dying' || playerState === 'hurt') {
@@ -1022,6 +1041,9 @@ const gameScene = {
       case 'attacking':
         handleAttackingState();
         break;
+      case 'attackExtra':
+        handleAttackExtraState();
+        break;
     }
 
     handleStateTransitions();
@@ -1059,6 +1081,9 @@ const gameScene = {
       if (attackHeld) {
         playerState = 'attacking';
       }
+      if (extraHeld) {
+        playerState = 'attackExtra';
+      }
     }
 
     //Handle Running State
@@ -1094,6 +1119,9 @@ const gameScene = {
       // Transition to attacking
       if (attackHeld) {
         playerState = 'attacking';
+      }
+      if (extraHeld) {
+        playerState = 'attackExtra';
       }
     }
 
@@ -1160,6 +1188,56 @@ const gameScene = {
           // Fallback if update events were sparse
           if (!boltReleased) {
             releaseBoltFromStaff(player.anims.currentAnim, { index: 6 });
+          }
+          playerState = 'idle';
+        });
+      }
+    }
+
+    function defeatEnemyWithMelee(enemyHit) {
+      if (!enemyHit || !enemyHit.active || enemyHit.getData('defeated')) {
+        return;
+      }
+      enemyHit.setData('defeated', true);
+      enemyHit.setVelocity(0, 0);
+      enemyHit.disableBody(true, true);
+      enemyHit.setActive(false);
+      enemyHit.setVisible(false);
+    }
+
+    function applyMeleeInFront() {
+      const facingLeft = player.flipX;
+      const reach = 110;
+      const xMin = facingLeft ? player.x - reach : player.x;
+      const xMax = facingLeft ? player.x : player.x + reach;
+      [enemy, enemy2, enemy3].forEach((foe) => {
+        if (!foe || !foe.active || foe.getData('defeated')) return;
+        if (foe.x >= xMin && foe.x <= xMax && Math.abs(foe.y - player.y) < 90) {
+          defeatEnemyWithMelee(foe);
+        }
+      });
+    }
+
+    function handleAttackExtraState() {
+      // Staff slam: play full swing first, then apply damage near the end
+      if (!player.anims.isPlaying || player.anims.currentAnim.key !== 'attackExtra') {
+        player.anims.play('attackExtra', true);
+        player.setVelocityX(0);
+        let damageApplied = false;
+
+        const tryApplyDamage = (anim, frame) => {
+          if (!anim || anim.key !== 'attackExtra' || damageApplied) return;
+          // 7 frames (0..6); hit only after the swing has mostly extended
+          if (frame.index < 5) return;
+          damageApplied = true;
+          applyMeleeInFront();
+        };
+
+        player.on('animationupdate-attackExtra', tryApplyDamage);
+        player.once('animationcomplete-attackExtra', () => {
+          player.off('animationupdate-attackExtra', tryApplyDamage);
+          if (!damageApplied) {
+            applyMeleeInFront();
           }
           playerState = 'idle';
         });

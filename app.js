@@ -491,9 +491,12 @@ const gameScene = {
     for (let i = 1; i <= 4; i++) {
       this.load.image('hurt' + i, './Mage/Hurt/hurt' + i + '.png');
     }
-    // Extra melee staff attack (attack_extra0..6)
+    // Extra attack: staff swing then fire burst (Attack_Extra + Fire_Extra)
     for (let i = 0; i <= 6; i++) {
       this.load.image('attackExtra' + i, './Mage/Attack_Extra/attack_extra' + i + '.png');
+    }
+    for (let i = 1; i <= 9; i++) {
+      this.load.image('fireExtra' + i, './Mage/Fire_Extra/fire_extra' + i + '.png');
     }
   },
 
@@ -714,6 +717,12 @@ const gameScene = {
     for (let i = 0; i <= 6; i++) {
       attackExtraFrames.push({ key: 'attackExtra' + i });
     }
+    let fireExtraFrames = [];
+    for (let i = 1; i <= 9; i++) {
+      fireExtraFrames.push({ key: 'fireExtra' + i });
+    }
+    // Combined Extra Attack sequence (matches Extra Attack sheet order)
+    const attackExtraComboFrames = attackExtraFrames.concat(fireExtraFrames);
 
     let fireFrames = [];
     for (let i = 1; i <= 9; i++) {
@@ -822,6 +831,21 @@ const gameScene = {
       key: 'attackExtra',
       frames: attackExtraFrames,
       frameRate: 10,
+      repeat: 0,
+    });
+
+    this.anims.create({
+      key: 'fireExtra',
+      frames: fireExtraFrames,
+      frameRate: 12,
+      repeat: 0,
+    });
+
+    // Full Extra Attack: Attack_Extra then Fire_Extra in sequence
+    this.anims.create({
+      key: 'attackExtraCombo',
+      frames: attackExtraComboFrames,
+      frameRate: 11,
       repeat: 0,
     });
 
@@ -1219,23 +1243,30 @@ const gameScene = {
     }
 
     function handleAttackExtraState() {
-      // Staff slam: play full swing first, then apply damage near the end
-      if (!player.anims.isPlaying || player.anims.currentAnim.key !== 'attackExtra') {
-        player.anims.play('attackExtra', true);
+      // Extra Attack: Attack_Extra swing, then Fire_Extra burst — damage only in the fire phase
+      if (
+        !player.anims.isPlaying ||
+        (player.anims.currentAnim.key !== 'attackExtraCombo' &&
+          player.anims.currentAnim.key !== 'attackExtra' &&
+          player.anims.currentAnim.key !== 'fireExtra')
+      ) {
+        player.anims.play('attackExtraCombo', true);
         player.setVelocityX(0);
         let damageApplied = false;
+        // Combo = 7 attack frames (0..6) + 9 fire frames (7..15)
+        const firePhaseStart = 7;
 
         const tryApplyDamage = (anim, frame) => {
-          if (!anim || anim.key !== 'attackExtra' || damageApplied) return;
-          // 7 frames (0..6); hit only after the swing has mostly extended
-          if (frame.index < 5) return;
+          if (!anim || anim.key !== 'attackExtraCombo' || damageApplied) return;
+          // Wait until Fire_Extra portion so the swing is fully visible first
+          if (frame.index < firePhaseStart + 2) return;
           damageApplied = true;
           applyMeleeInFront();
         };
 
-        player.on('animationupdate-attackExtra', tryApplyDamage);
-        player.once('animationcomplete-attackExtra', () => {
-          player.off('animationupdate-attackExtra', tryApplyDamage);
+        player.on('animationupdate-attackExtraCombo', tryApplyDamage);
+        player.once('animationcomplete-attackExtraCombo', () => {
+          player.off('animationupdate-attackExtraCombo', tryApplyDamage);
           if (!damageApplied) {
             applyMeleeInFront();
           }

@@ -483,6 +483,13 @@ const gameScene = {
     for (let i = 1; i <= 9; i++) {
       this.load.image('fire' + i, './Mage/Fire/fire' + i + '.png');
     }
+    // Death + hurt
+    for (let i = 1; i <= 10; i++) {
+      this.load.image('death' + i, './Mage/Death/death' + i + '.png');
+    }
+    for (let i = 1; i <= 4; i++) {
+      this.load.image('hurt' + i, './Mage/Hurt/hurt' + i + '.png');
+    }
   },
 
   create: function () {
@@ -688,6 +695,16 @@ const gameScene = {
       attackFrames.push({ key: 'attack' + i });
     }
 
+    let deathFrames = [];
+    for (let i = 1; i <= 10; i++) {
+      deathFrames.push({ key: 'death' + i });
+    }
+
+    let hurtFrames = [];
+    for (let i = 1; i <= 4; i++) {
+      hurtFrames.push({ key: 'hurt' + i });
+    }
+
     let fireFrames = [];
     for (let i = 1; i <= 9; i++) {
       fireFrames.push({ key: 'fire' + i });
@@ -777,6 +794,20 @@ const gameScene = {
       repeat: 0,
     });
 
+    this.anims.create({
+      key: 'death',
+      frames: deathFrames,
+      frameRate: 10,
+      repeat: 0,
+    });
+
+    this.anims.create({
+      key: 'hurt',
+      frames: hurtFrames,
+      frameRate: 10,
+      repeat: 0,
+    });
+
     // fire animation — full flame loop while the bolt travels
     this.anims.create({
       key: 'fire',
@@ -843,36 +874,50 @@ const gameScene = {
       if (this.invulnerableUntil && this.time.now < this.invulnerableUntil) {
         return;
       }
-      this.invulnerableUntil = this.time.now + 1500;
+      if (playerState === 'dying' || playerState === 'hurt') {
+        return;
+      }
+      this.invulnerableUntil = this.time.now + 1800;
 
-      player.disableBody(true, true);
+      player.setVelocity(0, 0);
+      if (player.body) {
+        player.body.enable = false;
+      }
+
       if (lives > 1) {
         lives -= 1;
         lifeIndicator.setText(`Lives: ${lives}`);
-        player.enableBody(
-          true,
-          Math.floor(Math.random() * 1700),
-          800,
-          true,
-          true
-        );
-        player.setBounce(0.1);
-        player.setCollideWorldBounds(true);
-        player.setAlpha(0.5);
-
-        // Fix player collision-box origin and size
-        player.body.setSize(player.width * 0.43, player.height * 0.45);
-        player.body.setOffset(player.width * 0.15, player.height * 0.43);
-
-        this.time.delayedCall(1500, () => {
-          if (player && player.active) {
-            player.setAlpha(1);
-          }
+        playerState = 'hurt';
+        player.anims.play('hurt', true);
+        player.once('animationcomplete-hurt', () => {
+          player.enableBody(
+            true,
+            Math.floor(Math.random() * 1700),
+            800,
+            true,
+            true
+          );
+          player.setBounce(0.1);
+          player.setCollideWorldBounds(true);
+          player.setAlpha(0.5);
+          player.body.setSize(player.width * 0.43, player.height * 0.45);
+          player.body.setOffset(player.width * 0.15, player.height * 0.43);
+          playerState = 'idle';
+          this.time.delayedCall(1500, () => {
+            if (player && player.active) {
+              player.setAlpha(1);
+            }
+          });
         });
       } else {
         lives -= 1;
         lifeIndicator.setText(`Lives: ${lives}`);
-        this.scene.start('GameOver');
+        playerState = 'dying';
+        setMobileControlsVisible(false);
+        player.anims.play('death', true);
+        player.once('animationcomplete-death', () => {
+          this.scene.start('GameOver');
+        });
       }
     }
 
@@ -938,6 +983,28 @@ const gameScene = {
     const rightHeld = cursors.right.isDown || dKey.isDown || touchInput.right;
     const upHeld = cursors.up.isDown || wKey.isDown || touchInput.up;
     const attackHeld = fKey.isDown || touchInput.attack;
+
+    // Let hurt/death anims play without movement stealing control
+    if (playerState === 'dying' || playerState === 'hurt') {
+      if (thisScene.fireballs) {
+        thisScene.fireballs.children.each((bolt) => {
+          if (!bolt.active || !bolt.body) return;
+          bolt.body.allowGravity = false;
+          bolt.setVelocityY(0);
+          if (bolt.x < -80 || bolt.x > 1970 || bolt.y < -80 || bolt.y > 980) {
+            bolt.anims.stop();
+            bolt.setActive(false);
+            bolt.setVisible(false);
+            bolt.body.stop();
+            bolt.body.enable = false;
+          }
+        });
+      }
+      enemyFollows(enemy, this);
+      enemyFollows(enemy2, this);
+      enemyFollows(enemy3, this);
+      return;
+    }
 
     switch (playerState) {
       case 'idle':

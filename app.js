@@ -1148,11 +1148,15 @@ const gameScene = {
 
 const config = {
   type: Phaser.AUTO,
+  parent: "game-container",
+  backgroundColor: "#000000",
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
     width: 1890,
     height: 890,
+    expandParent: true,
+    autoRound: true,
   },
   physics: {
     default: 'arcade',
@@ -1171,17 +1175,42 @@ const config = {
 
 const game = new Phaser.Game(config);
 
+function isPortraitPhone() {
+  const narrow = Math.min(window.innerWidth, window.innerHeight) < 900;
+  return narrow && window.matchMedia("(orientation: portrait)").matches;
+}
+
+function updateRotateHint() {
+  const hint = document.getElementById("rotate-hint");
+  if (!hint) return;
+  hint.classList.toggle("show", isPortraitPhone());
+}
+
+function refreshGameScale() {
+  updateRotateHint();
+  if (!game || !game.scale) return;
+  try {
+    game.scale.resize(1890, 890);
+  } catch (e) {}
+  game.scale.refresh();
+}
+
 setupMobileControls();
-window.addEventListener("resize", () => {
-  if (game && game.scale) {
-    game.scale.refresh();
-  }
+updateRotateHint();
+refreshGameScale();
+
+["resize", "orientationchange"].forEach((evt) => {
+  window.addEventListener(evt, () => {
+    refreshGameScale();
+    setTimeout(refreshGameScale, 100);
+    setTimeout(refreshGameScale, 300);
+    setTimeout(refreshGameScale, 600);
+  });
 });
-window.addEventListener("orientationchange", () => {
-  setTimeout(() => {
-    if (game && game.scale) {
-      game.scale.refresh();
-    }
-  }, 200);
-});
+
+if (window.visualViewport) {
+  window.visualViewport.addEventListener("resize", () => {
+    refreshGameScale();
+  });
+}
 

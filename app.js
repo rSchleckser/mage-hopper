@@ -1193,6 +1193,21 @@ function updateRotateHint() {
   if (!hint) return;
   const show = !rotateHintDismissed && isPortraitPhone();
   hint.classList.toggle("show", show);
+  hint.style.display = show ? "flex" : "none";
+}
+
+function dismissRotateHint(event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  rotateHintDismissed = true;
+  const hint = document.getElementById("rotate-hint");
+  if (hint) {
+    hint.classList.remove("show");
+    hint.style.display = "none";
+    hint.setAttribute("aria-hidden", "true");
+  }
 }
 
 function refreshGameScale() {
@@ -1207,9 +1222,8 @@ function refreshGameScale() {
 setupMobileControls();
 const dismissBtn = document.getElementById("rotate-dismiss");
 if (dismissBtn) {
-  dismissBtn.addEventListener("click", () => {
-    rotateHintDismissed = true;
-    updateRotateHint();
+  ["pointerdown", "touchstart", "click"].forEach((evt) => {
+    dismissBtn.addEventListener(evt, dismissRotateHint, { passive: false });
   });
 }
 updateRotateHint();

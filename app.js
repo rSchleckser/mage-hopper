@@ -618,10 +618,21 @@ const gameScene = {
       projectile.body.stop();
     });
     const hitEnemyWithFire = (projectile, enemyHit) => {
+      if (!enemyHit || !enemyHit.active || enemyHit.getData("defeated")) {
+        return;
+      }
       projectile.setActive(false);
       projectile.setVisible(false);
-      projectile.body.stop();
+      if (projectile.body) {
+        projectile.body.stop();
+        projectile.body.enable = false;
+      }
+      // Fully remove from combat so AI / player colliders cannot revive or hurt
+      enemyHit.setData("defeated", true);
+      enemyHit.setVelocity(0, 0);
       enemyHit.disableBody(true, true);
+      enemyHit.setActive(false);
+      enemyHit.setVisible(false);
     };
     this.physics.add.overlap(this.fireballs, enemy, hitEnemyWithFire, null, this);
     this.physics.add.overlap(this.fireballs, enemy2, hitEnemyWithFire, null, this);
@@ -814,6 +825,9 @@ const gameScene = {
     this.physics.add.collider(door, ground);
 
     function playerDies(player, enemyHit) {
+      if (!enemyHit || !enemyHit.active || enemyHit.getData("defeated")) {
+        return;
+      }
       // Brief invulnerability after a hit so colliders cannot chain-kill
       if (this.invulnerableUntil && this.time.now < this.invulnerableUntil) {
         return;
@@ -891,9 +905,11 @@ const gameScene = {
     fKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F);
 
     //PLayers dies and respawns
-    this.physics.add.collider(player, enemy, playerDies, null, this);
-    this.physics.add.collider(player, enemy2, playerDies, null, this);
-    this.physics.add.collider(player, enemy3, playerDies, null, this);
+    const enemyCanHurtPlayer = (playerObj, enemyObj) =>
+      !!(enemyObj && enemyObj.active && enemyObj.body && enemyObj.body.enable && !enemyObj.getData("defeated"));
+    this.physics.add.collider(player, enemy, playerDies, enemyCanHurtPlayer, this);
+    this.physics.add.collider(player, enemy2, playerDies, enemyCanHurtPlayer, this);
+    this.physics.add.collider(player, enemy3, playerDies, enemyCanHurtPlayer, this);
     //enables player to collect the key
     this.physics.add.overlap(player, key, collectKey, null, this);
     //player enters the door with key
@@ -1075,12 +1091,19 @@ const gameScene = {
 
     //function for all enemies
     function enemyFollows(enemy, scene) {
+      // Skip defeated / inactive knights — otherwise setVelocity re-enables them
+      if (!enemy || !enemy.active || enemy.getData("defeated") || !enemy.body || !enemy.body.enable) {
+        return;
+      }
       // Enemy animation for following the enemies on the y-axis
       //Enemy has a  delay jumping after player jumps
       if (player.body.y < enemy.body.y && enemy.body.touching.down) {
         scene.time.delayedCall(
           650,
           function () {
+            if (!enemy.active || enemy.getData("defeated") || !enemy.body || !enemy.body.enable) {
+              return;
+            }
             enemy.setVelocityY(-350);
           },
           [],

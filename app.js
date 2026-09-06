@@ -14,15 +14,14 @@ let collectedKey = false;
 
 class Projectile extends Phaser.Physics.Arcade.Sprite{
   constructor(scene, x, y){
-    super(scene, x, y, 'fire');
+    super(scene, x, y, 'fire1');
   }
 
   fire(x,y){
     this.body.reset(x, y);
-
     this.setActive(true);
     this.setVisible(true);
-    this.setVelocityX(200);
+    this.setVelocityX(320);
   }
 }
 
@@ -31,11 +30,11 @@ class ProjectileGroup extends Phaser.Physics.Arcade.Group{
     super(scene.physics.world, scene);
 
     this.createMultiple({
-      classType: Fire,
-      frameQuantity: 30, 
+      classType: Projectile,
+      frameQuantity: 30,
       active: false,
       visible: false,
-      key: 'fire',
+      key: 'fire1',
     })
   }
 
@@ -147,7 +146,7 @@ const menuScene = {
 
           closeinstructions.setInteractive().on('pointerover', () => {
             closeinstructions.setShadow(2, 2, 'rgba(145, 42, 42, 0.5)', 1);
-            closeinstructions.setColor('rgb(145, 42, 42))');
+            closeinstructions.setColor('rgb(145, 42, 42)');
           });
           closeinstructions.setInteractive().on('pointerout', () => {
             closeinstructions.setShadow(1, 1, 'rgba(145, 42, 42,0.5)', 2);
@@ -226,7 +225,10 @@ const gameOverScene = {
       .setInteractive();
 
     quit.on('pointerdown', () => {
-      this.scene.start('Menu'); // Transition to game scene
+      lives = 3;
+      level = 1;
+      collectedKey = false;
+      this.scene.start('Menu'); // Transition to menu
     });
     quit.setInteractive().on('pointerover', () => {
       quit.setShadow(2, 2, 'rgba(42, 145, 113,0.5)', 2);
@@ -530,6 +532,27 @@ const gameScene = {
     enemy3.body.setSize(enemy.width * 0.43, enemy.height * 0.45);
     enemy3.body.setOffset(enemy.width * 0.15, enemy.height * 0.43);
 
+    // Fireball pool (Projectile / ProjectileGroup)
+    this.fireballs = new ProjectileGroup(this);
+    this.physics.add.collider(this.fireballs, platforms, (projectile) => {
+      projectile.setActive(false);
+      projectile.setVisible(false);
+      projectile.body.stop();
+    });
+    const hitEnemyWithFire = (projectile, enemyHit) => {
+      projectile.setActive(false);
+      projectile.setVisible(false);
+      projectile.body.stop();
+      enemyHit.disableBody(true, true);
+    };
+    this.physics.add.overlap(this.fireballs, enemy, hitEnemyWithFire, null, this);
+    this.physics.add.overlap(this.fireballs, enemy2, hitEnemyWithFire, null, this);
+    this.physics.add.overlap(this.fireballs, enemy3, hitEnemyWithFire, null, this);
+
+    // Reset level-exit / i-frame flags for a fresh scene start
+    this.isExitingLevel = false;
+    this.invulnerableUntil = 0;
+
     // Set up running animation frames
     let runFrames = [];
     for (let i = 1; i <= 8; i++) {
@@ -678,19 +701,12 @@ const gameScene = {
     });
 
     //create the enemy runing left animation
+    // Facing is set per-enemy in enemyFollows (do not hardcode enemy flip here)
     this.anims.create({
       key: 'enemyRunLeft',
       frames: enemyRunFrames,
       frameRate: 10,
       repeat: -1,
-      // Set flipX to true when playing the 'left' animation
-      onStart: function () {
-        enemy.setFlipX(true);
-      },
-      // Reset flipX to false when the 'left' animation ends
-      onComplete: function () {
-        enemy.setFlipX(false);
-      },
     });
 
     //jump animation
@@ -719,7 +735,13 @@ const gameScene = {
     this.physics.add.collider(door, platforms);
     this.physics.add.collider(door, ground);
 
-    function playerDies(player, enemy) {
+    function playerDies(player, enemyHit) {
+      // Brief invulnerability after a hit so colliders cannot chain-kill
+      if (this.invulnerableUntil && this.time.now < this.invulnerableUntil) {
+        return;
+      }
+      this.invulnerableUntil = this.time.now + 1500;
+
       player.disableBody(true, true);
       if (lives > 1) {
         lives -= 1;
@@ -728,16 +750,22 @@ const gameScene = {
           true,
           Math.floor(Math.random() * 1700),
           800,
-          // Math.floor(Math.random() * 700),
           true,
           true
         );
         player.setBounce(0.1);
         player.setCollideWorldBounds(true);
+        player.setAlpha(0.5);
 
         // Fix player collision-box origin and size
         player.body.setSize(player.width * 0.43, player.height * 0.45);
         player.body.setOffset(player.width * 0.15, player.height * 0.43);
+
+        this.time.delayedCall(1500, () => {
+          if (player && player.active) {
+            player.setAlpha(1);
+          }
+        });
       } else {
         lives -= 1;
         lifeIndicator.setText(`Lives: ${lives}`);
@@ -752,27 +780,29 @@ const gameScene = {
     }
 
 
-    function enterDoor(player, door) {
-      if (collectedKey === true) {
-        // Create a fade-out effect
-        this.cameras.main.fadeOut(500);
-        // Wait for the fade-out to complete before destroying the door
-        this.time.delayedCall(
-          1000,
-          function () {
-            door.destroy();
-            collectedKey = false;
-            level += 1;
-            if (level <= 5) {
-              this.scene.start('NextLevel');
-            } else {
-              this.scene.start('GameWin');
-            }
-          },
-          [],
-          this
-        );
+    function enterDoor(player, doorSprite) {
+      if (collectedKey !== true || this.isExitingLevel) {
+        return;
       }
+      this.isExitingLevel = true;
+      // Create a fade-out effect
+      this.cameras.main.fadeOut(500);
+      // Wait for the fade-out to complete before advancing
+      this.time.delayedCall(
+        1000,
+        function () {
+          doorSprite.destroy();
+          collectedKey = false;
+          level += 1;
+          if (level <= 5) {
+            this.scene.start('NextLevel');
+          } else {
+            this.scene.start('GameWin');
+          }
+        },
+        [],
+        this
+      );
     }
 
         //key commands
@@ -797,6 +827,7 @@ const gameScene = {
   },
 
   update: function () {
+    const thisScene = this;
     cursors = this.input.keyboard.createCursorKeys();
 
     switch (playerState) {
@@ -927,14 +958,23 @@ const gameScene = {
     }
 
     function handleAttackingState() {
-      // Play the attack animation
-      player.anims.play('attack', true);
-      player.setVelocityX(0); 
-    
-      // Listen for animation completion
-      player.once('animationcomplete-attack', () => {
-        playerState = 'idle'; 
-      });
+      // Play the attack animation once and spawn a fireball
+      if (!player.anims.isPlaying || player.anims.currentAnim.key !== 'attack') {
+        player.anims.play('attack', true);
+        player.setVelocityX(0);
+        const facingLeft = player.flipX;
+        const spawnX = player.x + (facingLeft ? -40 : 40);
+        const spawnY = player.y;
+        const bolt = thisScene.fireballs.getFirstDead(false);
+        if (bolt) {
+          bolt.fire(spawnX, spawnY);
+          bolt.setFlipX(facingLeft);
+          bolt.setVelocityX(facingLeft ? -320 : 320);
+        }
+        player.once('animationcomplete-attack', () => {
+          playerState = 'idle';
+        });
+      }
     }
     
 

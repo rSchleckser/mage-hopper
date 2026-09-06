@@ -144,6 +144,7 @@ class SlamWave extends Phaser.Physics.Arcade.Sprite{
 
   despawn(){
     this.off('animationcomplete-fireExtra');
+    this.off('animationupdate-fireExtra');
     this.anims.stop();
     this.setActive(false);
     this.setVisible(false);
@@ -170,14 +171,31 @@ class SlamWave extends Phaser.Physics.Arcade.Sprite{
     const speed = 360;
     this.setVelocityX(dir * speed);
     this.setFlipX(dir < 0);
-    // Keep traveling across the screen; loop Fire_Extra until hit or off-screen
+
+    // Play into frame 3 (index 2 = fire_extra3), then hold while traveling — no recycle/loop
+    const holdFrameIndex = 2;
     this.off('animationcomplete-fireExtra');
+    this.off('animationupdate-fireExtra');
+
+    const holdOnTravelFrame = (anim, frame) => {
+      if (this.getData('impacting')) return;
+      if (!anim || anim.key !== 'fireExtra') return;
+      if (frame.index < holdFrameIndex) return;
+      // Snap to / stay on frame 3 and pause for the rest of the travel
+      if (anim.frames && anim.frames[holdFrameIndex]) {
+        this.anims.setCurrentFrame(anim.frames[holdFrameIndex]);
+      }
+      this.anims.pause();
+      this.off('animationupdate-fireExtra', holdOnTravelFrame);
+    };
+
+    this.on('animationupdate-fireExtra', holdOnTravelFrame);
     if (this.anims) {
-      this.anims.play({ key: 'fireExtra', repeat: -1 }, true);
+      this.anims.play({ key: 'fireExtra', repeat: 0 }, true);
     }
   }
 
-  // On enemy hit: stop movement and finish the remaining frames as an impact
+  // On enemy hit: stop movement and resume Fire_Extra from the held frame through the end
   beginImpact(){
     if (this.getData('impacting')) return;
     this.setData('impacting', true);
@@ -186,25 +204,31 @@ class SlamWave extends Phaser.Physics.Arcade.Sprite{
       this.body.stop();
       this.body.enable = false;
     }
-    const frame =
-      this.anims && this.anims.currentFrame
-        ? this.anims.currentFrame.index
-        : 0;
+    this.off('animationupdate-fireExtra');
     this.off('animationcomplete-fireExtra');
     this.once('animationcomplete-fireExtra', () => {
       this.despawn();
     });
-    if (this.anims) {
-      // Play out the rest of Fire_Extra from the current frame, then vanish
-      this.anims.play(
-        { key: 'fireExtra', startFrame: frame, repeat: 0 },
-        true
-      );
-    } else {
+
+    if (!this.anims) {
       this.despawn();
+      return;
     }
+
+    const holdFrameIndex = 2;
+    const cur =
+      this.anims.currentFrame && typeof this.anims.currentFrame.index === 'number'
+        ? this.anims.currentFrame.index
+        : holdFrameIndex;
+    // Continue the rest after the travel hold (from frame 3 onward)
+    const startFrame = Math.min(Math.max(cur, holdFrameIndex), 8);
+    this.anims.play(
+      { key: 'fireExtra', startFrame: startFrame, repeat: 0 },
+      true
+    );
   }
 }
+
 
 class SlamWaveGroup extends Phaser.Physics.Arcade.Group{
   constructor(scene){

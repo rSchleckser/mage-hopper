@@ -2,11 +2,29 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <link rel="stylesheet" href="style.css" />
     <title>Mage Hopper</title>
   </head>
   <body>
+    <div id="rotate-hint">
+      Rotate your phone to landscape for the best Mage Hopper experience.
+    </div>
+    <div id="mobile-controls" aria-hidden="true">
+      <div class="pad">
+        <button type="button" id="btn-left" aria-label="Move left">◀</button>
+        <button type="button" id="btn-right" aria-label="Move right">▶</button>
+      </div>
+      <div class="actions">
+        <button type="button" id="btn-jump" aria-label="Jump">JUMP</button>
+        <button type="button" id="btn-attack" aria-label="Fire">FIRE</button>
+      </div>
+    </div>
     <script src="//cdn.jsdelivr.net/npm/phaser@3.80.0/dist/phaser.js"></script>
     <script src="./app.js"></script>
   </body>

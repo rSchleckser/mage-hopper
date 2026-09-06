@@ -1181,6 +1181,8 @@ const config = {
 
 const game = new Phaser.Game(config);
 
+let rotateHintDismissed = false;
+
 function isPortraitPhone() {
   const narrow = Math.min(window.innerWidth, window.innerHeight) < 900;
   return narrow && window.matchMedia("(orientation: portrait)").matches;
@@ -1189,7 +1191,8 @@ function isPortraitPhone() {
 function updateRotateHint() {
   const hint = document.getElementById("rotate-hint");
   if (!hint) return;
-  hint.classList.toggle("show", isPortraitPhone());
+  const show = !rotateHintDismissed && isPortraitPhone();
+  hint.classList.toggle("show", show);
 }
 
 function refreshGameScale() {
@@ -1202,6 +1205,13 @@ function refreshGameScale() {
 }
 
 setupMobileControls();
+const dismissBtn = document.getElementById("rotate-dismiss");
+if (dismissBtn) {
+  dismissBtn.addEventListener("click", () => {
+    rotateHintDismissed = true;
+    updateRotateHint();
+  });
+}
 updateRotateHint();
 refreshGameScale();
 

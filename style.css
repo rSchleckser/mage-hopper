@@ -103,3 +103,11 @@ body {
 #mobile-controls .actions #btn-attack.pressed {
   background: rgba(180, 60, 60, 0.85);
 }
+
+
+/* CSS fallback so the rotate hint shows even if JS is slow/fails */
+@media (orientation: portrait) and (max-width: 900px) {
+  #rotate-hint {
+    display: flex;
+  }
+}

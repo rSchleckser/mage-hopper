@@ -40,7 +40,7 @@ function bindHoldButton(el, key) {
   el.addEventListener("lostpointercapture", (e) => set(false, e));
 }
 
-function setMcbileControlsVisible(visible) {
+function setMobileControlsVisible(visible) {
   const controls = document.getElementById("mobile-controls");
   if (!controls) return;
   if (visible && isTouchDevice()) {
@@ -72,9 +72,15 @@ function setupMobileControls() {
 
 function enlargeTextHitArea(textObj, padX = 24, padY = 16) {
   if (!textObj || !textObj.setInteractive) return textObj;
-  textObj.setInteractive();
-  const b = textObj.getBounds();
-  textObj.input.hitArea.setTo(-padX, -padY, b.width + padX * 2, b.height + padY * 2);
+  try {
+    const b = textObj.getBounds();
+    textObj.setInteractive(
+      new Phaser.Geom.Rectangle(-padX, -padY, b.width + padX * 2, b.height + padY * 2),
+      Phaser.Geom.Rectangle.Contains
+    );
+  } catch (e) {
+    textObj.setInteractive();
+  }
   return textObj;
 }
 

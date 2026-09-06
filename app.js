@@ -143,8 +143,8 @@ class SlamWave extends Phaser.Physics.Arcade.Sprite{
   }
 
   despawn(){
-    this.off('animationcomplete-fireExtra');
-    this.off('animationupdate-fireExtra');
+    this.off('animationcomplete-fireExtraTravel');
+    this.off('animationcomplete-fireExtraImpact');
     this.anims.stop();
     this.setActive(false);
     this.setVisible(false);
@@ -158,6 +158,8 @@ class SlamWave extends Phaser.Physics.Arcade.Sprite{
   launch(x, y, dir = 1){
     this.setActive(true);
     this.setVisible(true);
+    this.setAlpha(1);
+    this.setDepth(50);
     this.setData('impacting', false);
     if (this.body) {
       this.body.enable = true;
@@ -172,30 +174,24 @@ class SlamWave extends Phaser.Physics.Arcade.Sprite{
     this.setVelocityX(dir * speed);
     this.setFlipX(dir < 0);
 
-    // Play into frame 3 (index 2 = fire_extra3), then hold while traveling — no recycle/loop
-    const holdFrameIndex = 2;
-    this.off('animationcomplete-fireExtra');
-    this.off('animationupdate-fireExtra');
-
-    const holdOnTravelFrame = (anim, frame) => {
+    // Play fire_extra1..3, then freeze on fire_extra3 for the travel
+    this.off('animationcomplete-fireExtraTravel');
+    this.off('animationcomplete-fireExtraImpact');
+    this.once('animationcomplete-fireExtraTravel', () => {
       if (this.getData('impacting')) return;
-      if (!anim || anim.key !== 'fireExtra') return;
-      if (frame.index < holdFrameIndex) return;
-      // Snap to / stay on frame 3 and pause for the rest of the travel
-      if (anim.frames && anim.frames[holdFrameIndex]) {
-        this.anims.setCurrentFrame(anim.frames[holdFrameIndex]);
-      }
-      this.anims.pause();
-      this.off('animationupdate-fireExtra', holdOnTravelFrame);
-    };
-
-    this.on('animationupdate-fireExtra', holdOnTravelFrame);
+      this.anims.stop();
+      this.setTexture('fireExtra3');
+      this.setVisible(true);
+      this.setAlpha(1);
+    });
     if (this.anims) {
-      this.anims.play({ key: 'fireExtra', repeat: 0 }, true);
+      this.anims.play('fireExtraTravel', true);
+    } else {
+      this.setTexture('fireExtra3');
     }
   }
 
-  // On enemy hit: stop movement and resume Fire_Extra from the held frame through the end
+  // On enemy hit: stop, play fire_extra4..9 as the impact, then vanish
   beginImpact(){
     if (this.getData('impacting')) return;
     this.setData('impacting', true);
@@ -204,31 +200,20 @@ class SlamWave extends Phaser.Physics.Arcade.Sprite{
       this.body.stop();
       this.body.enable = false;
     }
-    this.off('animationupdate-fireExtra');
-    this.off('animationcomplete-fireExtra');
-    this.once('animationcomplete-fireExtra', () => {
+    this.off('animationcomplete-fireExtraTravel');
+    this.off('animationcomplete-fireExtraImpact');
+    this.once('animationcomplete-fireExtraImpact', () => {
       this.despawn();
     });
-
-    if (!this.anims) {
+    this.setVisible(true);
+    this.setAlpha(1);
+    if (this.anims) {
+      this.anims.play('fireExtraImpact', true);
+    } else {
       this.despawn();
-      return;
     }
-
-    const holdFrameIndex = 2;
-    const cur =
-      this.anims.currentFrame && typeof this.anims.currentFrame.index === 'number'
-        ? this.anims.currentFrame.index
-        : holdFrameIndex;
-    // Continue the rest after the travel hold (from frame 3 onward)
-    const startFrame = Math.min(Math.max(cur, holdFrameIndex), 8);
-    this.anims.play(
-      { key: 'fireExtra', startFrame: startFrame, repeat: 0 },
-      true
-    );
   }
 }
-
 
 class SlamWaveGroup extends Phaser.Physics.Arcade.Group{
   constructor(scene){
@@ -969,10 +954,16 @@ const gameScene = {
       repeat: 0,
     });
 
-    // Fire_Extra wave VFX (spawned as a traveling sprite, not on the player)
+    // Fire_Extra wave: travel holds on fire_extra3; impact plays the rest
     this.anims.create({
-      key: 'fireExtra',
-      frames: fireExtraFrames,
+      key: 'fireExtraTravel',
+      frames: fireExtraFrames.slice(0, 3), // fire_extra1..3
+      frameRate: 14,
+      repeat: 0,
+    });
+    this.anims.create({
+      key: 'fireExtraImpact',
+      frames: fireExtraFrames.slice(3), // fire_extra4..9
       frameRate: 14,
       repeat: 0,
     });

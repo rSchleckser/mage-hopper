@@ -136,6 +136,46 @@ class ProjectileGroup extends Phaser.Physics.Arcade.Group{
 
 }
 
+// Extra Attack fire wave — separate VFX that travels out from the staff
+class SlamWave extends Phaser.Physics.Arcade.Sprite{
+  constructor(scene, x, y){
+    super(scene, x, y, 'fireExtra1');
+  }
+
+  launch(x, y, dir = 1){
+    this.setActive(true);
+    this.setVisible(true);
+    if (this.body) {
+      this.body.enable = true;
+      this.body.reset(x, y);
+      this.body.allowGravity = false;
+      if (this.body.setAllowGravity) this.body.setAllowGravity(false);
+    }
+    this.setScale(2.6);
+    this.setVelocityY(0);
+    this.setAcceleration(0, 0);
+    const speed = 360;
+    this.setVelocityX(dir * speed);
+    this.setFlipX(dir < 0);
+    if (this.anims) {
+      this.anims.play('fireExtra', true);
+    }
+  }
+}
+
+class SlamWaveGroup extends Phaser.Physics.Arcade.Group{
+  constructor(scene){
+    super(scene.physics.world, scene);
+    this.createMultiple({
+      classType: SlamWave,
+      frameQuantity: 8,
+      active: false,
+      visible: false,
+      key: 'fireExtra1',
+    });
+  }
+}
+
 const menuScene = {
   key: 'Menu',
 
@@ -642,6 +682,8 @@ const gameScene = {
 
     // Fireball pool (Projectile / ProjectileGroup)
     this.fireballs = new ProjectileGroup(this);
+    // Extra Attack wave pool (travels out; not played on the player)
+    this.slamWaves = new SlamWaveGroup(this);
     // Fireballs fly straight; no platform bounce/stop — cleaned up when off-screen
     const hitEnemyWithFire = (projectile, enemyHit) => {
       if (!enemyHit || !enemyHit.active || enemyHit.getData("defeated")) {
@@ -663,6 +705,9 @@ const gameScene = {
     this.physics.add.overlap(this.fireballs, enemy, hitEnemyWithFire, null, this);
     this.physics.add.overlap(this.fireballs, enemy2, hitEnemyWithFire, null, this);
     this.physics.add.overlap(this.fireballs, enemy3, hitEnemyWithFire, null, this);
+    this.physics.add.overlap(this.slamWaves, enemy, hitEnemyWithFire, null, this);
+    this.physics.add.overlap(this.slamWaves, enemy2, hitEnemyWithFire, null, this);
+    this.physics.add.overlap(this.slamWaves, enemy3, hitEnemyWithFire, null, this);
 
     // Reset level-exit / i-frame flags for a fresh scene start
     this.isExitingLevel = false;
@@ -721,8 +766,6 @@ const gameScene = {
     for (let i = 1; i <= 9; i++) {
       fireExtraFrames.push({ key: 'fireExtra' + i });
     }
-    // Combined Extra Attack sequence (matches Extra Attack sheet order)
-    const attackExtraComboFrames = attackExtraFrames.concat(fireExtraFrames);
 
     let fireFrames = [];
     for (let i = 1; i <= 9; i++) {
@@ -834,18 +877,11 @@ const gameScene = {
       repeat: 0,
     });
 
+    // Fire_Extra wave VFX (spawned as a traveling sprite, not on the player)
     this.anims.create({
       key: 'fireExtra',
       frames: fireExtraFrames,
-      frameRate: 12,
-      repeat: 0,
-    });
-
-    // Full Extra Attack: Attack_Extra then Fire_Extra in sequence
-    this.anims.create({
-      key: 'attackExtraCombo',
-      frames: attackExtraComboFrames,
-      frameRate: 11,
+      frameRate: 14,
       repeat: 0,
     });
 
@@ -1243,32 +1279,41 @@ const gameScene = {
     }
 
     function handleAttackExtraState() {
-      // Extra Attack: Attack_Extra swing, then Fire_Extra burst — damage only in the fire phase
-      if (
-        !player.anims.isPlaying ||
-        (player.anims.currentAnim.key !== 'attackExtraCombo' &&
-          player.anims.currentAnim.key !== 'attackExtra' &&
-          player.anims.currentAnim.key !== 'fireExtra')
-      ) {
-        player.anims.play('attackExtraCombo', true);
+      // Extra Attack: play staff swing on the mage, then launch Fire_Extra as a traveling wave
+      if (!player.anims.isPlaying || player.anims.currentAnim.key !== 'attackExtra') {
+        player.anims.play('attackExtra', true);
         player.setVelocityX(0);
-        let damageApplied = false;
-        // Combo = 7 attack frames (0..6) + 9 fire frames (7..15)
-        const firePhaseStart = 7;
+        let waveReleased = false;
 
-        const tryApplyDamage = (anim, frame) => {
-          if (!anim || anim.key !== 'attackExtraCombo' || damageApplied) return;
-          // Wait until Fire_Extra portion so the swing is fully visible first
-          if (frame.index < firePhaseStart + 2) return;
-          damageApplied = true;
-          applyMeleeInFront();
+        const releaseWaveFromStaff = (anim, frame) => {
+          if (!anim || anim.key !== 'attackExtra' || waveReleased) return;
+          // 7 frames (0..6); release near the end of the swing so anim plays first
+          if (frame.index < 5) return;
+          waveReleased = true;
+          const facingLeft = player.flipX;
+          const dir = facingLeft ? -1 : 1;
+          const spawnX = player.x + (facingLeft ? -62 : 62);
+          const spawnY = player.y - 18;
+          const wave = thisScene.slamWaves.getFirstDead(false);
+          if (wave) {
+            wave.launch(spawnX, spawnY, dir);
+          }
         };
 
-        player.on('animationupdate-attackExtraCombo', tryApplyDamage);
-        player.once('animationcomplete-attackExtraCombo', () => {
-          player.off('animationupdate-attackExtraCombo', tryApplyDamage);
-          if (!damageApplied) {
-            applyMeleeInFront();
+        player.on('animationupdate-attackExtra', releaseWaveFromStaff);
+        player.once('animationcomplete-attackExtra', () => {
+          player.off('animationupdate-attackExtra', releaseWaveFromStaff);
+          if (!waveReleased) {
+            const facingLeft = player.flipX;
+            const dir = facingLeft ? -1 : 1;
+            const wave = thisScene.slamWaves.getFirstDead(false);
+            if (wave) {
+              wave.launch(
+                player.x + (facingLeft ? -62 : 62),
+                player.y - 18,
+                dir
+              );
+            }
           }
           playerState = 'idle';
         });
@@ -1374,20 +1419,24 @@ const gameScene = {
     enemyFollows(enemy2, this);
     enemyFollows(enemy3, this);
 
-    // Keep fireballs on a linear path and recycle when they leave the screen
+    // Keep fireballs / slam waves on a linear path and recycle when they leave the screen
+    const recycleOffscreen = (bolt) => {
+      if (!bolt.active || !bolt.body) return;
+      bolt.body.allowGravity = false;
+      bolt.setVelocityY(0);
+      if (bolt.x < -80 || bolt.x > 1970 || bolt.y < -80 || bolt.y > 980) {
+        bolt.anims.stop();
+        bolt.setActive(false);
+        bolt.setVisible(false);
+        bolt.body.stop();
+        bolt.body.enable = false;
+      }
+    };
     if (thisScene.fireballs) {
-      thisScene.fireballs.children.each((bolt) => {
-        if (!bolt.active || !bolt.body) return;
-        bolt.body.allowGravity = false;
-        bolt.setVelocityY(0);
-        if (bolt.x < -80 || bolt.x > 1970 || bolt.y < -80 || bolt.y > 980) {
-          bolt.anims.stop();
-          bolt.setActive(false);
-          bolt.setVisible(false);
-          bolt.body.stop();
-          bolt.body.enable = false;
-        }
-      });
+      thisScene.fireballs.children.each(recycleOffscreen);
+    }
+    if (thisScene.slamWaves) {
+      thisScene.slamWaves.children.each(recycleOffscreen);
     }
   },
 };

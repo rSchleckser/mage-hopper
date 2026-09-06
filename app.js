@@ -145,7 +145,7 @@ class SlamWave extends Phaser.Physics.Arcade.Sprite{
   despawn(){
     this.off('animationcomplete-fireExtraTravel');
     this.off('animationcomplete-fireExtraImpact');
-    this.anims.stop();
+    if (this.anims) this.anims.stop();
     this.setActive(false);
     this.setVisible(false);
     this.setData('impacting', false);
@@ -170,16 +170,15 @@ class SlamWave extends Phaser.Physics.Arcade.Sprite{
     this.setScale(2.6);
     this.setVelocityY(0);
     this.setAcceleration(0, 0);
-    const speed = 360;
-    this.setVelocityX(dir * speed);
+    this.setVelocityX(dir * 360);
     this.setFlipX(dir < 0);
 
-    // Play fire_extra1..3, then freeze on fire_extra3 for the travel
+    // fire_extra1..3, then freeze on fire_extra3 while traveling
     this.off('animationcomplete-fireExtraTravel');
     this.off('animationcomplete-fireExtraImpact');
     this.once('animationcomplete-fireExtraTravel', () => {
-      if (this.getData('impacting')) return;
-      this.anims.stop();
+      if (!this.active || this.getData('impacting')) return;
+      if (this.anims) this.anims.stop();
       this.setTexture('fireExtra3');
       this.setVisible(true);
       this.setAlpha(1);
@@ -191,7 +190,6 @@ class SlamWave extends Phaser.Physics.Arcade.Sprite{
     }
   }
 
-  // On enemy hit: stop, play fire_extra4..9 as the impact, then vanish
   beginImpact(){
     if (this.getData('impacting')) return;
     this.setData('impacting', true);
@@ -202,12 +200,17 @@ class SlamWave extends Phaser.Physics.Arcade.Sprite{
     }
     this.off('animationcomplete-fireExtraTravel');
     this.off('animationcomplete-fireExtraImpact');
+    this.setVisible(true);
+    this.setAlpha(1);
+    this.setDepth(50);
+
+    // Play the rest (fire_extra4..9), then vanish
     this.once('animationcomplete-fireExtraImpact', () => {
       this.despawn();
     });
-    this.setVisible(true);
-    this.setAlpha(1);
     if (this.anims) {
+      this.anims.stop();
+      // Must play a different anim than the paused travel clip so frames actually advance
       this.anims.play('fireExtraImpact', true);
     } else {
       this.despawn();
@@ -954,17 +957,17 @@ const gameScene = {
       repeat: 0,
     });
 
-    // Fire_Extra wave: travel holds on fire_extra3; impact plays the rest
+    // Fire_Extra: travel holds on fire_extra3; impact plays fire_extra4..9
     this.anims.create({
       key: 'fireExtraTravel',
-      frames: fireExtraFrames.slice(0, 3), // fire_extra1..3
+      frames: fireExtraFrames.slice(0, 3),
       frameRate: 14,
       repeat: 0,
     });
     this.anims.create({
       key: 'fireExtraImpact',
-      frames: fireExtraFrames.slice(3), // fire_extra4..9
-      frameRate: 14,
+      frames: fireExtraFrames.slice(3),
+      frameRate: 12,
       repeat: 0,
     });
 

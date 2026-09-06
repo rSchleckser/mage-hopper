@@ -1066,18 +1066,34 @@ const gameScene = {
     }
 
     function handleAttackingState() {
-      // Play the attack animation once and spawn a fireball
+      // Play attack first; release the bolt near the end of the staff extension
       if (!player.anims.isPlaying || player.anims.currentAnim.key !== 'attack') {
         player.anims.play('attack', true);
         player.setVelocityX(0);
-        const facingLeft = player.flipX;
-        const spawnX = player.x + (facingLeft ? -40 : 40);
-        const spawnY = player.y;
-        const bolt = thisScene.fireballs.getFirstDead(false);
-        if (bolt) {
-          bolt.fire(spawnX, spawnY, facingLeft ? -1 : 1);
-        }
+        let boltReleased = false;
+
+        const releaseBoltFromStaff = (anim, frame) => {
+          if (!anim || anim.key !== 'attack' || boltReleased) return;
+          // attack has 7 frames (0..6); spawn as she finishes extending (~frame 5)
+          if (frame.index < 5) return;
+          boltReleased = true;
+          const facingLeft = player.flipX;
+          // Further out so it reads as leaving the staff tip
+          const spawnX = player.x + (facingLeft ? -95 : 95);
+          const spawnY = player.y - 10;
+          const bolt = thisScene.fireballs.getFirstDead(false);
+          if (bolt) {
+            bolt.fire(spawnX, spawnY, facingLeft ? -1 : 1);
+          }
+        };
+
+        player.on('animationupdate-attack', releaseBoltFromStaff);
         player.once('animationcomplete-attack', () => {
+          player.off('animationupdate-attack', releaseBoltFromStaff);
+          // Fallback if update events were sparse
+          if (!boltReleased) {
+            releaseBoltFromStaff(player.anims.currentAnim, { index: 6 });
+          }
           playerState = 'idle';
         });
       }

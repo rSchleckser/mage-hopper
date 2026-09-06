@@ -1,1 +1,1 @@
-PLACEHOLDER_TEST_MCP_WRITE
+file:///workspace/mage-hopper/app.js

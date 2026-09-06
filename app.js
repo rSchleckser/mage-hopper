@@ -142,9 +142,22 @@ class SlamWave extends Phaser.Physics.Arcade.Sprite{
     super(scene, x, y, 'fireExtra1');
   }
 
+  despawn(){
+    this.off('animationcomplete-fireExtra');
+    this.anims.stop();
+    this.setActive(false);
+    this.setVisible(false);
+    this.setData('impacting', false);
+    if (this.body) {
+      this.body.stop();
+      this.body.enable = false;
+    }
+  }
+
   launch(x, y, dir = 1){
     this.setActive(true);
     this.setVisible(true);
+    this.setData('impacting', false);
     if (this.body) {
       this.body.enable = true;
       this.body.reset(x, y);
@@ -157,20 +170,38 @@ class SlamWave extends Phaser.Physics.Arcade.Sprite{
     const speed = 360;
     this.setVelocityX(dir * speed);
     this.setFlipX(dir < 0);
-    // Stop and despawn on the last Fire_Extra frame (don't keep drifting)
+    // Keep traveling across the screen; loop Fire_Extra until hit or off-screen
+    this.off('animationcomplete-fireExtra');
+    if (this.anims) {
+      this.anims.play({ key: 'fireExtra', repeat: -1 }, true);
+    }
+  }
+
+  // On enemy hit: stop movement and finish the remaining frames as an impact
+  beginImpact(){
+    if (this.getData('impacting')) return;
+    this.setData('impacting', true);
+    this.setVelocity(0, 0);
+    if (this.body) {
+      this.body.stop();
+      this.body.enable = false;
+    }
+    const frame =
+      this.anims && this.anims.currentFrame
+        ? this.anims.currentFrame.index
+        : 0;
     this.off('animationcomplete-fireExtra');
     this.once('animationcomplete-fireExtra', () => {
-      this.setVelocity(0, 0);
-      this.anims.stop();
-      this.setActive(false);
-      this.setVisible(false);
-      if (this.body) {
-        this.body.stop();
-        this.body.enable = false;
-      }
+      this.despawn();
     });
     if (this.anims) {
-      this.anims.play('fireExtra', true);
+      // Play out the rest of Fire_Extra from the current frame, then vanish
+      this.anims.play(
+        { key: 'fireExtra', startFrame: frame, repeat: 0 },
+        true
+      );
+    } else {
+      this.despawn();
     }
   }
 }
@@ -697,6 +728,14 @@ const gameScene = {
     // Extra Attack wave pool (travels out; not played on the player)
     this.slamWaves = new SlamWaveGroup(this);
     // Fireballs fly straight; no platform bounce/stop — cleaned up when off-screen
+    const defeatEnemyHit = (enemyHit) => {
+      enemyHit.setData("defeated", true);
+      enemyHit.setVelocity(0, 0);
+      enemyHit.disableBody(true, true);
+      enemyHit.setActive(false);
+      enemyHit.setVisible(false);
+    };
+
     const hitEnemyWithFire = (projectile, enemyHit) => {
       if (!enemyHit || !enemyHit.active || enemyHit.getData("defeated")) {
         return;
@@ -708,18 +747,35 @@ const gameScene = {
         projectile.body.enable = false;
       }
       // Fully remove from combat so AI / player colliders cannot revive or hurt
-      enemyHit.setData("defeated", true);
-      enemyHit.setVelocity(0, 0);
-      enemyHit.disableBody(true, true);
-      enemyHit.setActive(false);
-      enemyHit.setVisible(false);
+      defeatEnemyHit(enemyHit);
+    };
+
+    // Slam wave: defeat foe, stop the wave, finish remaining Fire_Extra as impact
+    const hitEnemyWithSlamWave = (wave, enemyHit) => {
+      if (!enemyHit || !enemyHit.active || enemyHit.getData("defeated")) {
+        return;
+      }
+      if (wave.getData("impacting")) {
+        return;
+      }
+      defeatEnemyHit(enemyHit);
+      if (typeof wave.beginImpact === "function") {
+        wave.beginImpact();
+      } else {
+        wave.setActive(false);
+        wave.setVisible(false);
+        if (wave.body) {
+          wave.body.stop();
+          wave.body.enable = false;
+        }
+      }
     };
     this.physics.add.overlap(this.fireballs, enemy, hitEnemyWithFire, null, this);
     this.physics.add.overlap(this.fireballs, enemy2, hitEnemyWithFire, null, this);
     this.physics.add.overlap(this.fireballs, enemy3, hitEnemyWithFire, null, this);
-    this.physics.add.overlap(this.slamWaves, enemy, hitEnemyWithFire, null, this);
-    this.physics.add.overlap(this.slamWaves, enemy2, hitEnemyWithFire, null, this);
-    this.physics.add.overlap(this.slamWaves, enemy3, hitEnemyWithFire, null, this);
+    this.physics.add.overlap(this.slamWaves, enemy, hitEnemyWithSlamWave, null, this);
+    this.physics.add.overlap(this.slamWaves, enemy2, hitEnemyWithSlamWave, null, this);
+    this.physics.add.overlap(this.slamWaves, enemy3, hitEnemyWithSlamWave, null, this);
 
     // Reset level-exit / i-frame flags for a fresh scene start
     this.isExitingLevel = false;

@@ -1,3 +1,91 @@
 body {
   margin: 0;
+  overflow: hidden;
+  background: #000;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  overscroll-behavior: none;
+}
+
+canvas {
+  touch-action: none;
+}
+
+#rotate-hint {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem;
+  padding: max(2rem, env(safe-area-inset-top)) max(2rem, env(safe-area-inset-right))
+    max(2rem, env(safe-area-inset-bottom)) max(2rem, env(safe-area-inset-left));
+  background: rgba(0, 0, 0, 0.92);
+  color: #fff;
+  font-family: system-ui, -apple-system, Roboto, sans-serif;
+  font-size: 1.25rem;
+  line-height: 1.4;
+}
+
+@media (orientation: portrait) and (max-width: 900px) {
+  #rotate-hint {
+    display: flex;
+  }
+}
+
+#mobile-controls {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 900;
+  display: none;
+  justify-content: space-between;
+  align-items: flex-end;
+  pointer-events: none;
+  padding: 0 max(12px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom))
+    max(12px, env(safe-area-inset-left));
+}
+
+#mobile-controls.visible {
+  display: flex;
+}
+
+#mobile-controls .pad,
+#mobile-controls .actions {
+  display: flex;
+  gap: 12px;
+  pointer-events: auto;
+}
+
+#mobile-controls button {
+  width: 72px;
+  height: 72px;
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  border-radius: 16px;
+  background: rgba(20, 40, 40, 0.55);
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 700;
+  font-family: system-ui, -apple-system, Roboto, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+}
+
+#mobile-controls button:active,
+#mobile-controls button.pressed {
+  background: rgba(42, 145, 145, 0.75);
+  transform: scale(0.96);
+}
+
+#mobile-controls .actions #btn-attack {
+  background: rgba(145, 42, 42, 0.55);
+}
+
+#mobile-controls .actions #btn-attack:active,
+#mobile-controls .actions #btn-attack.pressed {
+  background: rgba(180, 60, 60, 0.85);
 }

@@ -277,59 +277,77 @@ function getMenuLayout(scene) {
   const WORLD_W = 1890;
   const WORLD_H = 890;
   const cx = 1000;
-  const cy = 445; // slightly below true center so stack sits in the letterbox band
+  const cy = 445;
   const canvas = scene.game?.canvas;
   const cssW = (canvas && canvas.clientWidth) || scene.scale.displaySize?.width || WORLD_W;
   const cssH = (canvas && canvas.clientHeight) || scene.scale.displaySize?.height || WORLD_H;
   const ds = Math.min(cssW / WORLD_W, cssH / WORLD_H) || 1;
-  // Portrait FIT letterbox: canvas is wide+short in CSS → ds is small.
   const compact = ds < 0.55;
 
-  // Desktop-first sizes (no inflate blow-up). Mobile gets a modest bump then FIT-TO-STRIP.
-  let titleSize = compact ? 78 : 112;
-  let startH = compact ? 52 : 58;
-  let startW = compact ? 280 : 300;
-  let instrH = compact ? 44 : 50;
-  let instrW = compact ? 220 : 230;
-  let ribbonFont = compact ? 16 : 22;
-  let ribbonPadX = compact ? 22 : 28;
-  let ribbonPadY = compact ? 8 : 10;
-  let gap = compact ? 12 : 20;
-
-  // Prefer Start ≥ ~44 CSS px when it still fits; never force overflow.
-  const minStartWorld = Math.ceil(44 / Math.max(ds, 0.12));
-  if (compact && startH < minStartWorld) {
-    startH = Math.min(minStartWorld, 70); // hard cap — strip is short
-    startW = Math.min(Math.round(startW * (startH / 52)), 340);
-    instrH = Math.min(Math.round(instrH * (startH / 52)), 56);
-    instrW = Math.min(Math.round(instrW * (startH / 52)), 280);
+  // Desktop: fixed world sizes matching the approved enlarged wordmark hierarchy.
+  if (!compact) {
+    return {
+      cx,
+      cy,
+      ds,
+      compact: false,
+      titleSize: 118,
+      ribbonFont: 22,
+      ribbonPadX: 28,
+      ribbonPadY: 10,
+      startW: 300,
+      startH: 58,
+      instrW: 230,
+      instrH: 50,
+      gap: 20,
+      strokeTitle: 9,
+    };
   }
 
-  // Approximate stack height and shrink uniformly so it fits ~74% of world height.
-  const maxStack = Math.round(WORLD_H * 0.74);
-  const ribbonHApprox = ribbonFont + ribbonPadY + 4;
-  const estimate = () =>
-    titleSize + ribbonHApprox + startH + instrH + gap * 3.3 + Math.round(titleSize * 0.15);
+  // Mobile / letterbox: design in CSS px to match approved mobile mock, then → world.
+  // Strip CSS height is the visible game band (FIT letterbox).
+  const stripCss = Math.max(WORLD_H * ds, 1);
+  // Mock: TITLE dominates the band; Start ~48 CSS; Instructions secondary; small margins.
+  const usable = stripCss * 0.92;
+  let titleCss = usable * 0.36; // wordmark hierarchy — largest element
+  let ribbonCss = usable * 0.08;
+  let startCss = Math.min(52, Math.max(46, usable * 0.22));
+  let instrCss = Math.min(40, Math.max(32, usable * 0.135));
+  let gapCss = usable * 0.035;
+  // Gaps appear 3x (title→ribbon, ribbon→start, start→instr)
+  const sum = () => titleCss + ribbonCss + startCss + instrCss + gapCss * 3;
   let guard = 0;
-  while (estimate() > maxStack && guard < 24) {
+  while (sum() > usable && guard < 24) {
     guard += 1;
-    const s = maxStack / estimate();
-    titleSize = Math.max(42, Math.floor(titleSize * s));
-    startH = Math.max(36, Math.floor(startH * s));
-    startW = Math.max(160, Math.floor(startW * s));
-    instrH = Math.max(32, Math.floor(instrH * s));
-    instrW = Math.max(140, Math.floor(instrW * s));
-    ribbonFont = Math.max(11, Math.floor(ribbonFont * s));
-    ribbonPadX = Math.max(10, Math.floor(ribbonPadX * s));
-    ribbonPadY = Math.max(4, Math.floor(ribbonPadY * s));
-    gap = Math.max(6, Math.floor(gap * s));
+    const s = usable / sum();
+    // Protect title hierarchy — shrink CTAs/gaps more than the wordmark.
+    titleCss *= Math.pow(s, 0.35);
+    ribbonCss *= s;
+    startCss *= Math.pow(s, 1.15);
+    instrCss *= Math.pow(s, 1.15);
+    gapCss *= s;
   }
+  // Prefer Start ≥ ~44 CSS px when the strip still has room.
+  if (startCss < 44 && usable - sum() > 2) {
+    startCss += Math.min(44 - startCss, usable - sum());
+  }
+
+  const toWorld = (css) => Math.round(css / ds);
+  const titleSize = Math.max(56, toWorld(titleCss));
+  const startH = Math.max(40, toWorld(startCss));
+  const startW = Math.round(Math.min(WORLD_W * 0.42, startH * 5.2));
+  const instrH = Math.max(34, toWorld(instrCss));
+  const instrW = Math.round(Math.min(WORLD_W * 0.34, instrH * 4.8));
+  const ribbonFont = Math.max(12, toWorld(ribbonCss * 0.55));
+  const ribbonPadX = Math.max(12, toWorld(ribbonCss * 0.35));
+  const ribbonPadY = Math.max(5, toWorld(ribbonCss * 0.22));
+  const gap = Math.max(8, toWorld(gapCss));
 
   return {
     cx,
     cy,
     ds,
-    compact,
+    compact: true,
     titleSize,
     ribbonFont,
     ribbonPadX,
@@ -339,8 +357,7 @@ function getMenuLayout(scene) {
     instrW,
     instrH,
     gap,
-    strokeTitle: Math.max(4, Math.round(titleSize * 0.08)),
-    maxStack,
+    strokeTitle: Math.max(5, Math.round(titleSize * 0.08)),
   };
 }
 

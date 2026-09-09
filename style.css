@@ -219,7 +219,7 @@ body {
   display: none;
   position: fixed;
   inset: 0;
-  z-index: 12000;
+  z-index: 2147483000;
   align-items: stretch;
   justify-content: center;
   padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
@@ -227,6 +227,8 @@ body {
   box-sizing: border-box;
   background: rgba(10, 16, 16, 0.72);
   -webkit-tap-highlight-color: transparent;
+  pointer-events: auto !important;
+  touch-action: manipulation;
 }
 #instructions-dom-ui.show {
   display: flex;
@@ -260,6 +262,11 @@ body {
   font-weight: 900;
   font-size: 1.45rem;
 }
+#instructions-dom-ui .howto-panel {
+  pointer-events: auto !important;
+  position: relative;
+  z-index: 1;
+}
 #instructions-dom-ui .howto-close,
 #instructions-dom-ui .howto-prev,
 #instructions-dom-ui .howto-next {
@@ -273,6 +280,11 @@ body {
   font-size: 1rem;
   cursor: pointer;
   touch-action: manipulation;
+  pointer-events: auto !important;
+  position: relative;
+  z-index: 2;
+  -webkit-user-select: none;
+  user-select: none;
 }
 #instructions-dom-ui .howto-close {
   background: #f5d0d0;

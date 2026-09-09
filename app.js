@@ -586,17 +586,50 @@ function shouldUseDomInstructions() {
   return isTouchDevice() || (narrow && portrait) || window.innerWidth < 700;
 }
 
+
+function setGameSurfaceInteractive(enabled) {
+  const canvas = document.querySelector('#game-container canvas');
+  const gc = document.getElementById('game-container');
+  if (canvas) canvas.style.pointerEvents = enabled ? '' : 'none';
+  if (gc) gc.style.pointerEvents = enabled ? '' : 'none';
+}
+
+function bindDomTap(el, fn, opts) {
+  if (!el) return;
+  const onlyDirect = !!(opts && opts.onlyDirect);
+  let locked = false;
+  const run = (e) => {
+    if (onlyDirect && e && e.target !== el) return;
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (locked) return;
+    locked = true;
+    setTimeout(() => {
+      locked = false;
+    }, 400);
+    fn(e);
+  };
+  // pointerdown is the reliable Android Chrome signal; click alone often never fires
+  // when body/canvas use touch-action: none.
+  ['pointerdown', 'touchend', 'click'].forEach((evt) => {
+    el.addEventListener(evt, run, { passive: false });
+  });
+}
+
 function hideInstructionsDomUi() {
   const root = document.getElementById('instructions-dom-ui');
   if (!root) return;
   root.classList.remove('show');
   root.setAttribute('aria-hidden', 'true');
   root.style.display = 'none';
+  setGameSurfaceInteractive(true);
 }
 
 function openInstructionsDomOverlay(scene) {
   hideMenuDomUi();
-  hideInstructionsDomUi();
+  // Don't call hideInstructionsDomUi() first — it can fight the show we're about to do.
 
   let root = document.getElementById('instructions-dom-ui');
   if (!root) {
@@ -670,7 +703,10 @@ function openInstructionsDomOverlay(scene) {
   root.classList.add('show');
   root.setAttribute('aria-hidden', 'false');
 
-  // Marker so Phaser path knows DOM is open
+  // Keep Phaser/canvas from eating Android touches under the overlay.
+  setGameSurfaceInteractive(false);
+  if (scene.input) scene.input.enabled = false;
+
   scene._instructionsOverlay = { dom: true };
 
   let pageIndex = 0;
@@ -682,6 +718,8 @@ function openInstructionsDomOverlay(scene) {
 
   const closeOverlay = () => {
     hideInstructionsDomUi();
+    setGameSurfaceInteractive(true);
+    if (scene.input) scene.input.enabled = true;
     scene._instructionsOverlay = null;
     scene.events.emit('instructions-closed');
   };
@@ -694,28 +732,23 @@ function openInstructionsDomOverlay(scene) {
     });
     dots.forEach((d, i) => d.classList.toggle('on', i === pageIndex));
     prevBtn.disabled = pageIndex === 0;
+    prevBtn.setAttribute('aria-disabled', pageIndex === 0 ? 'true' : 'false');
     prevBtn.style.opacity = pageIndex === 0 ? '0.45' : '1';
     nextBtn.textContent = pageIndex >= pages.length - 1 ? 'Done' : 'Next';
   };
   showPage(0);
 
-  prevBtn.onclick = (e) => {
-    e.preventDefault();
+  bindDomTap(prevBtn, () => {
     if (pageIndex > 0) showPage(pageIndex - 1);
-  };
-  nextBtn.onclick = (e) => {
-    e.preventDefault();
+  });
+  bindDomTap(nextBtn, () => {
     if (pageIndex < pages.length - 1) showPage(pageIndex + 1);
     else closeOverlay();
-  };
-  closeBtn.onclick = (e) => {
-    e.preventDefault();
-    closeOverlay();
-  };
-  // Backdrop tap closes
-  root.onclick = (e) => {
-    if (e.target === root) closeOverlay();
-  };
+  });
+  bindDomTap(closeBtn, () => closeOverlay());
+
+  // Backdrop tap closes (only the dimmed root, not the panel).
+  bindDomTap(root, () => closeOverlay(), { onlyDirect: true });
 
   return scene._instructionsOverlay;
 }
@@ -1019,14 +1052,9 @@ function syncMenuDomUi(scene, startHit, instrHit, handlers) {
   const rebind = (el, fn) => {
     const next = el.cloneNode(true);
     el.parentNode.replaceChild(next, el);
-    const fire = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
+    bindDomTap(next, () => {
       if (typeof fn === 'function') fn();
-    };
-    next.addEventListener('click', fire, { passive: false });
-    next.addEventListener('pointerup', fire, { passive: false });
-    next.addEventListener('touchend', fire, { passive: false });
+    });
     return next;
   };
   rebind(document.getElementById('menu-dom-start'), handlers.onStart);

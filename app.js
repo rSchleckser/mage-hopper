@@ -274,89 +274,31 @@ const MENU_COLORS = {
 };
 
 function getMenuLayout(scene) {
-  const WORLD_W = 1890;
-  const WORLD_H = 890;
+  // Fixed mock-proportion sizes in WORLD space. Phaser Scale.FIT already maps
+  // the 1890×890 world into the letterbox — do NOT inflate from CSS (that caused
+  // the zoom/clip spiral). A uniform group scale later fits the stack if needed.
   const cx = 1000;
   const cy = 445;
   const canvas = scene.game?.canvas;
-  const cssW = (canvas && canvas.clientWidth) || scene.scale.displaySize?.width || WORLD_W;
-  const cssH = (canvas && canvas.clientHeight) || scene.scale.displaySize?.height || WORLD_H;
-  const ds = Math.min(cssW / WORLD_W, cssH / WORLD_H) || 1;
-  const compact = ds < 0.55;
-
-  // Desktop: fixed world sizes matching the approved enlarged wordmark hierarchy.
-  if (!compact) {
-    return {
-      cx,
-      cy,
-      ds,
-      compact: false,
-      titleSize: 118,
-      ribbonFont: 22,
-      ribbonPadX: 28,
-      ribbonPadY: 10,
-      startW: 300,
-      startH: 58,
-      instrW: 230,
-      instrH: 50,
-      gap: 20,
-      strokeTitle: 9,
-    };
-  }
-
-  // Mobile / letterbox: CSS-px design matching approved mobile mock, then → world.
-  // Fill almost the whole FIT strip (mock is “letterboxed but readable”, not tiny).
-  const stripCss = Math.max(WORLD_H * ds, 1);
-  const usable = stripCss * 0.96;
-  let titleCss = usable * 0.34; // TITLE ≫ CTAs (width-capped later if needed)
-  let ribbonCss = usable * 0.075;
-  let startCss = Math.min(54, Math.max(48, usable * 0.245)); // mock: Start ≥ ~48 CSS
-  let instrCss = Math.min(42, Math.max(34, usable * 0.145));
-  let gapCss = usable * 0.028;
-  const sum = () => titleCss + ribbonCss + startCss + instrCss + gapCss * 3;
-  let guard = 0;
-  while (sum() > usable && guard < 28) {
-    guard += 1;
-    const s = usable / sum();
-    // Protect wordmark; shrink CTAs/gaps first.
-    titleCss *= Math.pow(s, 0.28);
-    ribbonCss *= s;
-    startCss *= Math.pow(s, 1.2);
-    instrCss *= Math.pow(s, 1.2);
-    gapCss *= s;
-  }
-  // Lock Start near 48 CSS when strip has room (mock touch target).
-  if (startCss < 48 && usable - sum() > 1) {
-    startCss += Math.min(48 - startCss, usable - sum());
-  }
-
-  const toWorld = (css) => Math.round(css / ds);
-  const titleSize = Math.max(64, toWorld(titleCss));
-  const startH = Math.max(44, toWorld(startCss));
-  // Wider pills like the mock (use more of the strip width).
-  const startW = Math.round(Math.min(WORLD_W * 0.46, Math.max(startH * 5.2, WORLD_W * 0.34)));
-  const instrH = Math.max(36, toWorld(instrCss));
-  const instrW = Math.round(Math.min(WORLD_W * 0.36, Math.max(instrH * 4.6, WORLD_W * 0.26)));
-  const ribbonFont = Math.max(13, toWorld(ribbonCss * 0.58));
-  const ribbonPadX = Math.max(14, toWorld(ribbonCss * 0.4));
-  const ribbonPadY = Math.max(6, toWorld(ribbonCss * 0.24));
-  const gap = Math.max(8, toWorld(gapCss));
-
+  const cssW = (canvas && canvas.clientWidth) || scene.scale.displaySize?.width || 1890;
+  const cssH = (canvas && canvas.clientHeight) || scene.scale.displaySize?.height || 890;
+  const ds = Math.min(cssW / 1890, cssH / 890) || 1;
   return {
     cx,
     cy,
     ds,
-    compact: true,
-    titleSize,
-    ribbonFont,
-    ribbonPadX,
-    ribbonPadY,
-    startW,
-    startH,
-    instrW,
-    instrH,
-    gap,
-    strokeTitle: Math.max(5, Math.round(titleSize * 0.08)),
+    compact: ds < 0.55,
+    // Approved mobile mock hierarchy (TITLE ≫ Start > Instructions), desktop-comfortable.
+    titleSize: 92,
+    ribbonFont: 18,
+    ribbonPadX: 24,
+    ribbonPadY: 8,
+    startW: 280,
+    startH: 54,
+    instrW: 210,
+    instrH: 44,
+    gap: 16,
+    strokeTitle: 7,
   };
 }
 
@@ -949,9 +891,10 @@ const menuScene = {
 
   create: function () {
     setMobileControlsVisible(false);
-    // Don't let the rotate banner compete with menu taps.
     if (typeof dismissRotateHint === 'function') {
-      try { dismissRotateHint(); } catch (e) {}
+      try {
+        dismissRotateHint();
+      } catch (e) {}
     }
 
     const destroyMenu = () => {
@@ -969,47 +912,32 @@ const menuScene = {
       const nodes = [];
       this._menuNodes = nodes;
 
+      // Background stays full-bleed (not part of scaled menu group).
       nodes.push(this.add.image(1000, 400, 'background'));
 
       const layout = getMenuLayout(this);
-      let { cx, cy, titleSize, strokeTitle, ribbonFont, ribbonPadX, ribbonPadY, startW, startH, instrW, instrH, gap } =
-        layout;
+      const {
+        cx,
+        cy,
+        titleSize,
+        strokeTitle,
+        ribbonFont,
+        ribbonPadX,
+        ribbonPadY,
+        startW,
+        startH,
+        instrW,
+        instrH,
+        gap,
+      } = layout;
 
-      // Fit wordmark to strip WIDTH (Richard: M/R were clipped after #27 height scale).
-      const maxTitleW = 1890 * 0.9;
-      const titleProbe = this.add
-        .text(0, 0, 'MAGE HOPPER', {
-          fontFamily: 'Cinzel, serif',
-          fontSize: `${titleSize}px`,
-          fontStyle: '900',
-          stroke: '#1a2424',
-          strokeThickness: strokeTitle,
-        })
-        .setVisible(false);
-      if (titleProbe.width > maxTitleW) {
-        titleSize = Math.max(48, Math.floor(titleSize * (maxTitleW / titleProbe.width)));
-        strokeTitle = Math.max(4, Math.round(titleSize * 0.08));
-        titleProbe.setFontSize(titleSize);
-        titleProbe.setStroke('#1a2424', strokeTitle);
-      }
-      const ribbonProbe = this.add
-        .text(0, 0, 'A PLATFORM ADVENTURE', {
-          fontFamily: 'Nunito, system-ui, sans-serif',
-          fontSize: `${ribbonFont}px`,
-          fontStyle: '800',
-        })
-        .setVisible(false);
-      const titleH = titleProbe.height;
-      const rh = ribbonProbe.height + ribbonPadY;
-      titleProbe.destroy();
-      ribbonProbe.destroy();
-
-      const stackH = titleH + Math.round(gap * 0.45) + rh + gap + startH + Math.round(gap * 0.85) + instrH;
-      const topY = cy - stackH / 2;
-      const titleY = topY + titleH / 2;
+      // Build menu stack in LOCAL coords inside a group, then ONE uniform scale to fit.
+      const group = this.add.container(0, 0);
+      group.setDepth(10);
+      nodes.push(group);
 
       const title = this.add
-        .text(cx, titleY, 'MAGE HOPPER', {
+        .text(0, 0, 'MAGE HOPPER', {
           fontFamily: 'Cinzel, serif',
           fontSize: `${titleSize}px`,
           fontStyle: '900',
@@ -1025,9 +953,7 @@ const menuScene = {
             stroke: true,
           },
         })
-        .setOrigin(0.5)
-        .setDepth(10);
-      nodes.push(title);
+        .setOrigin(0.5, 0);
 
       const ribbonText = this.add
         .text(0, 0, 'A PLATFORM ADVENTURE', {
@@ -1038,44 +964,68 @@ const menuScene = {
         })
         .setOrigin(0.5);
       const rw = ribbonText.width + ribbonPadX * 2;
-      const ribbonY = titleY + titleH / 2 + rh / 2 + Math.round(gap * 0.45);
+      const rh = ribbonText.height + ribbonPadY;
       const ribbonG = this.add.graphics();
       ribbonG.fillStyle(MENU_COLORS.cream, 0.55);
-      ribbonG.fillRoundedRect(cx - rw / 2, ribbonY - rh / 2, rw, rh, 3);
-      ribbonText.setPosition(cx, ribbonY);
-      ribbonG.setDepth(10);
-      ribbonText.setDepth(11);
-      nodes.push(ribbonG, ribbonText);
+      ribbonG.fillRoundedRect(-rw / 2, -rh / 2, rw, rh, 3);
 
-      const startY = ribbonY + rh / 2 + gap + startH / 2;
-      const startBtn = makePillButton(this, cx, startY, 'Start Game', {
+      const startBtn = makePillButton(this, 0, 0, 'Start Game', {
         width: startW,
         height: startH,
         variant: 'primary',
         fontSize: Math.round(startH * 0.38),
         depth: 20,
       });
-      const onStart = () => {
-        hideMenuDomUi();
-        this.scene.start('Game');
-      };
-      startBtn.setOnActivate(onStart);
-      nodes.push(startBtn);
-
-      const instrY = startY + startH / 2 + gap * 0.85 + instrH / 2;
-      const instrBtn = makePillButton(this, cx, instrY, 'Instructions', {
+      const instrBtn = makePillButton(this, 0, 0, 'Instructions', {
         width: instrW,
         height: instrH,
         variant: 'secondary',
         fontSize: Math.round(instrH * 0.38),
         depth: 20,
       });
+      // Menu taps use DOM overlays — drop Phaser zones (misaligned once group scales).
+      [startBtn, instrBtn].forEach((btn) => {
+        if (btn._hitZone) {
+          btn._hitZone.destroy();
+          btn._hitZone = null;
+        }
+      });
+
+      // Stack locally from y=0 downward (origin top-center of title).
+      let y = 0;
+      title.setPosition(0, y);
+      y += title.height + Math.round(gap * 0.45);
+      ribbonG.setPosition(0, y + rh / 2);
+      ribbonText.setPosition(0, y + rh / 2);
+      y += rh + gap;
+      startBtn.setPosition(0, y + startH / 2);
+      // keep hit-zone destroy already done; position container child
+      y += startH + Math.round(gap * 0.85);
+      instrBtn.setPosition(0, y + instrH / 2);
+      y += instrH;
+
+      group.add([title, ribbonG, ribbonText, startBtn, instrBtn]);
+
+      // Measure unscaled stack; one uniform scale to fit — NEVER scale up (stops inflate spiral).
+      const localH = y;
+      const localW = Math.max(title.width, rw, startW, instrW);
+      const maxW = 1890 * 0.9;
+      const maxH = 890 * 0.85;
+      const scale = Math.min(1, maxW / Math.max(localW, 1), maxH / Math.max(localH, 1));
+      group.setScale(scale);
+      // Top of stack at cy - half scaled height (centered in letterbox world).
+      group.setPosition(cx, cy - (localH * scale) / 2);
+
+      const onStart = () => {
+        hideMenuDomUi();
+        this.scene.start('Game');
+      };
       const onInstr = () => {
         hideMenuDomUi();
         openInstructionsOverlay(this);
       };
+      startBtn.setOnActivate(onStart);
       instrBtn.setOnActivate(onInstr);
-      nodes.push(instrBtn);
 
       if (!this._instrCloseBound) {
         this._instrCloseBound = true;
@@ -1088,12 +1038,16 @@ const menuScene = {
         });
       }
 
-      // Invisible DOM hit targets aligned to visible pills — reliable on Android Chrome.
-      const pad = Math.max(10, Math.round(startH * 0.15));
+      // DOM hits from scaled world positions (fat min target kept inside syncMenuDomUi).
+      const pad = 12;
+      const startWorldX = group.x + startBtn.x * scale;
+      const startWorldY = group.y + startBtn.y * scale;
+      const instrWorldX = group.x + instrBtn.x * scale;
+      const instrWorldY = group.y + instrBtn.y * scale;
       syncMenuDomUi(
         this,
-        { x: cx, y: startY, w: startW + pad * 2, h: startH + pad * 2 },
-        { x: cx, y: instrY, w: instrW + pad * 2, h: instrH + pad * 2 },
+        { x: startWorldX, y: startWorldY, w: (startW + pad * 2) * scale, h: (startH + pad * 2) * scale },
+        { x: instrWorldX, y: instrWorldY, w: (instrW + pad * 2) * scale, h: (instrH + pad * 2) * scale },
         { onStart, onInstr }
       );
     };

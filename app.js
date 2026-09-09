@@ -263,144 +263,593 @@ class SlamWaveGroup extends Phaser.Physics.Arcade.Group{
   }
 }
 
+const MENU_COLORS = {
+  teal: 0x2a9191,
+  tealDeep: 0x1f6e6e,
+  tealLite: 0x3aabb0,
+  cream: 0xfff8e7,
+  ink: 0x1a2424,
+  fire: 0x912a2a,
+  slam: 0x785014,
+};
+
+function getMenuLayout(scene) {
+  const WORLD_W = 1890;
+  const WORLD_H = 890;
+  const cx = 1000;
+  const cy = 400;
+  const displayW = scene.scale.displaySize?.width || WORLD_W;
+  const displayH = scene.scale.displaySize?.height || WORLD_H;
+  const ds = Math.min(displayW / WORLD_W, displayH / WORLD_H) || 1;
+  // Inflate world UI when FIT letterboxing shrinks CSS pixels (portrait phones).
+  const designedStartH = 58;
+  const targetCss = 48;
+  const needed = targetCss / Math.max(ds, 0.12);
+  const inflate = Math.max(1, Math.min(needed / designedStartH, 4.2));
+  const compact = inflate > 1.15;
+
+  const startH = Math.round(designedStartH * inflate);
+  const startW = Math.round((compact ? 240 : 280) * Math.min(inflate, 2.8));
+  const instrH = Math.round((compact ? 44 : 48) * inflate);
+  const instrW = Math.round((compact ? 200 : 220) * Math.min(inflate, 2.8));
+  const titleSize = Math.round((compact ? 92 : 112) * Math.min(inflate, 2.4));
+  const ribbonPadX = Math.round(28 * Math.min(inflate, 2.2));
+  const ribbonPadY = Math.round(10 * Math.min(inflate, 2.2));
+  const ribbonFont = Math.round((compact ? 18 : 22) * Math.min(inflate, 2.0));
+  const gap = Math.round((compact ? 18 : 22) * Math.min(inflate, 2.0));
+
+  return {
+    cx,
+    cy,
+    ds,
+    inflate,
+    compact,
+    titleSize,
+    ribbonFont,
+    ribbonPadX,
+    ribbonPadY,
+    startW,
+    startH,
+    instrW,
+    instrH,
+    gap,
+    strokeTitle: Math.max(6, Math.round(titleSize * 0.08)),
+  };
+}
+
+function drawPill(g, w, h, opts) {
+  const {
+    fillTop = MENU_COLORS.tealLite,
+    fillBottom = MENU_COLORS.tealDeep,
+    stroke = 0xffffff,
+    strokeAlpha = 0.35,
+    strokeWidth = 3,
+    shadow = 0x1f6e6e,
+    shadowAlpha = 1,
+    shadowY = 4,
+    highlight = true,
+    pressed = false,
+  } = opts || {};
+  g.clear();
+  const r = h / 2;
+  const yOff = pressed ? 3 : 0;
+  const shY = pressed ? 1 : shadowY;
+  // Drop shadow / depth plate
+  g.fillStyle(shadow, shadowAlpha);
+  g.fillRoundedRect(-w / 2, -h / 2 + shY + yOff, w, h, r);
+  // Body
+  g.fillGradientStyle(fillTop, fillTop, fillBottom, fillBottom, 1);
+  g.fillRoundedRect(-w / 2, -h / 2 + yOff, w, h, r);
+  // Flat fill override when solidFill provided
+  if (opts && opts.solidFill != null) {
+    g.fillStyle(opts.solidFill, opts.solidAlpha != null ? opts.solidAlpha : 1);
+    g.fillRoundedRect(-w / 2, -h / 2 + yOff, w, h, r);
+  }
+  if (strokeWidth > 0) {
+    g.lineStyle(strokeWidth, stroke, strokeAlpha);
+    g.strokeRoundedRect(-w / 2, -h / 2 + yOff, w, h, r);
+  }
+  if (highlight && !pressed && !(opts && opts.solidFill != null)) {
+    g.lineStyle(2, 0xffffff, 0.28);
+    g.beginPath();
+    g.moveTo(-w / 2 + r, -h / 2 + 4 + yOff);
+    g.lineTo(w / 2 - r, -h / 2 + 4 + yOff);
+    g.strokePath();
+  }
+}
+
+function makePillButton(scene, x, y, label, style) {
+  const {
+    width,
+    height,
+    variant = 'primary', // primary | secondary | danger | nav | navPrimary
+    fontSize,
+    depth = 20,
+  } = style;
+  const container = scene.add.container(x, y);
+  const g = scene.add.graphics();
+  const textColor =
+    variant === 'secondary' || variant === 'nav'
+      ? '#1a2424'
+      : variant === 'danger'
+        ? '#912a2a'
+        : '#ffffff';
+  const txt = scene.add
+    .text(0, 0, label, {
+      fontFamily: 'Nunito, system-ui, sans-serif',
+      fontSize: `${fontSize || Math.round(height * 0.42)}px`,
+      fontStyle: '800',
+      color: textColor,
+    })
+    .setOrigin(0.5);
+  container.add([g, txt]);
+  container.setDepth(depth);
+  container.setSize(width, height);
+
+  const palette = () => {
+    if (variant === 'primary' || variant === 'navPrimary') {
+      return {
+        fillTop: MENU_COLORS.tealLite,
+        fillBottom: MENU_COLORS.tealDeep,
+        stroke: 0xffffff,
+        strokeAlpha: 0.35,
+        shadow: MENU_COLORS.tealDeep,
+        highlight: true,
+      };
+    }
+    if (variant === 'danger') {
+      return {
+        solidFill: 0xf5d0d0,
+        solidAlpha: 0.95,
+        stroke: MENU_COLORS.fire,
+        strokeAlpha: 0.55,
+        strokeWidth: 2,
+        shadow: 0x6e1f1f,
+        shadowAlpha: 0.25,
+        shadowY: 2,
+        highlight: false,
+      };
+    }
+    // secondary / nav
+    return {
+      solidFill: MENU_COLORS.cream,
+      solidAlpha: variant === 'nav' ? 1 : 0.95,
+      stroke: MENU_COLORS.ink,
+      strokeAlpha: 0.35,
+      strokeWidth: 2,
+      shadow: MENU_COLORS.ink,
+      shadowAlpha: 0.2,
+      shadowY: 2,
+      highlight: false,
+    };
+  };
+
+  let state = 'up';
+  const paint = () => {
+    const base = palette();
+    if (state === 'hover' && (variant === 'primary' || variant === 'navPrimary')) {
+      base.fillTop = 0x4bb8bc;
+      base.fillBottom = 0x2a9191;
+    } else if (state === 'hover' && variant !== 'danger') {
+      base.solidAlpha = 1;
+    } else if (state === 'hover' && variant === 'danger') {
+      base.solidFill = 0xf8c0c0;
+    }
+    if (state === 'down') {
+      if (variant === 'primary' || variant === 'navPrimary') {
+        base.fillTop = MENU_COLORS.tealDeep;
+        base.fillBottom = 0x185858;
+      } else if (variant === 'danger') {
+        base.solidFill = 0xe8a0a0;
+      } else {
+        base.solidFill = 0xf0e6d0;
+      }
+      base.pressed = true;
+    }
+    drawPill(g, width, height, base);
+    txt.setY(state === 'down' ? 3 : 0);
+  };
+  paint();
+
+  container.setInteractive(
+    new Phaser.Geom.Rectangle(-width / 2, -height / 2, width, height),
+    Phaser.Geom.Rectangle.Contains
+  );
+  container.on('pointerover', () => {
+    state = 'hover';
+    paint();
+  });
+  container.on('pointerout', () => {
+    state = 'up';
+    paint();
+  });
+  container.on('pointerdown', () => {
+    state = 'down';
+    paint();
+  });
+  container.on('pointerup', () => {
+    state = 'hover';
+    paint();
+  });
+
+  container.setLabel = (s) => txt.setText(s);
+  container.getText = () => txt;
+  container.repaint = paint;
+  return container;
+}
+
+function buildKeyChip(scene, x, y, label, kind) {
+  const w = label.length > 2 ? 96 : 44;
+  const h = 44;
+  const g = scene.add.graphics();
+  let fill = 0x2a3232;
+  let stroke = 0xffffff;
+  let strokeA = 0.45;
+  if (kind === 'fire') {
+    fill = 0x5c2222;
+    stroke = 0xdc5050;
+    strokeA = 0.85;
+  } else if (kind === 'slam') {
+    fill = 0x5c4018;
+    stroke = 0xdca03c;
+    strokeA = 0.85;
+  }
+  g.fillStyle(fill, 1);
+  g.fillRoundedRect(x - w / 2, y - h / 2, w, h, 8);
+  g.lineStyle(2, stroke, strokeA);
+  g.strokeRoundedRect(x - w / 2, y - h / 2, w, h, 8);
+  const t = scene.add
+    .text(x, y, label, {
+      fontFamily: 'Nunito, system-ui, sans-serif',
+      fontSize: '18px',
+      fontStyle: '800',
+      color: '#ffffff',
+    })
+    .setOrigin(0.5);
+  return [g, t];
+}
+
+function buildActionRow(scene, x, y, tag, tagColor, desc) {
+  const items = [];
+  const g = scene.add.graphics();
+  const tagW = Math.max(64, tag.length * 11 + 20);
+  const tagH = 26;
+  g.fillStyle(tagColor, 1);
+  g.fillRoundedRect(x, y - tagH / 2, tagW, tagH, tagH / 2);
+  items.push(g);
+  items.push(
+    scene.add
+      .text(x + tagW / 2, y, tag, {
+        fontFamily: 'Nunito, system-ui, sans-serif',
+        fontSize: '13px',
+        fontStyle: '800',
+        color: '#ffffff',
+      })
+      .setOrigin(0.5)
+  );
+  items.push(
+    scene.add
+      .text(x + tagW + 12, y, desc, {
+        fontFamily: 'Nunito, system-ui, sans-serif',
+        fontSize: '18px',
+        fontStyle: '700',
+        color: '#1a2424',
+      })
+      .setOrigin(0, 0.5)
+  );
+  return items;
+}
+
+function openInstructionsOverlay(scene) {
+  if (scene._instructionsOverlay) {
+    scene._instructionsOverlay.destroy(true);
+    scene._instructionsOverlay = null;
+  }
+
+  const overlay = scene.add.container(0, 0);
+  overlay.setDepth(200);
+  scene._instructionsOverlay = overlay;
+
+  const dim = scene.add.rectangle(1000, 400, 1890, 890, 0x0a1010, 0.55);
+  dim.setInteractive(); // block clicks to menu beneath
+  overlay.add(dim);
+
+  const panelW = 720;
+  const panelH = 420;
+  const panelX = 1000;
+  const panelY = 400;
+  const panelBg = scene.add.graphics();
+  panelBg.fillGradientStyle(0xfff8e7, 0xfff8e7, 0xf3e6c8, 0xf3e6c8, 1);
+  panelBg.fillRoundedRect(panelX - panelW / 2, panelY - panelH / 2, panelW, panelH, 16);
+  panelBg.lineStyle(3, MENU_COLORS.ink, 0.45);
+  panelBg.strokeRoundedRect(panelX - panelW / 2, panelY - panelH / 2, panelW, panelH, 16);
+  overlay.add(panelBg);
+
+  const title = scene.add
+    .text(panelX - panelW / 2 + 28, panelY - panelH / 2 + 28, 'How to play', {
+      fontFamily: 'Cinzel, serif',
+      fontSize: '32px',
+      fontStyle: '900',
+      color: '#1a2424',
+    })
+    .setOrigin(0, 0.5);
+  overlay.add(title);
+
+  const closeBtn = makePillButton(scene, panelX + panelW / 2 - 70, panelY - panelH / 2 + 28, 'Close', {
+    width: 110,
+    height: 40,
+    variant: 'danger',
+    fontSize: 16,
+    depth: 210,
+  });
+  overlay.add(closeBtn);
+
+  const pagesRoot = scene.add.container(0, 0);
+  overlay.add(pagesRoot);
+
+  const pages = [];
+  // Page 1 — controls
+  {
+    const c = scene.add.container(0, 0);
+    const keyPanel = scene.add.graphics();
+    const kx = panelX - panelW / 2 + 28;
+    const ky = panelY - 70;
+    const kw = 320;
+    const kh = 200;
+    keyPanel.fillStyle(MENU_COLORS.ink, 1);
+    keyPanel.fillRoundedRect(kx, ky, kw, kh, 12);
+    c.add(keyPanel);
+    buildKeyChip(scene, kx + 40, ky + 48, '<', 'move').forEach((o) => c.add(o));
+    buildKeyChip(scene, kx + 96, ky + 48, '>', 'move').forEach((o) => c.add(o));
+    buildKeyChip(scene, kx + 210, ky + 48, 'SPACE', 'move').forEach((o) => c.add(o));
+    buildKeyChip(scene, kx + 56, ky + 110, 'F', 'fire').forEach((o) => c.add(o));
+    buildKeyChip(scene, kx + 120, ky + 110, 'E', 'slam').forEach((o) => c.add(o));
+    c.add(
+      scene.add
+        .text(kx + 16, ky + kh - 36, 'Custom diagram — no stock watermark.\nMobile: on-screen JUMP / FIRE / SLAM.', {
+          fontFamily: 'Nunito, system-ui, sans-serif',
+          fontSize: '13px',
+          fontStyle: '600',
+          color: 'rgba(255,255,255,0.75)',
+          lineSpacing: 4,
+        })
+        .setOrigin(0, 0)
+    );
+    const listX = panelX + 40;
+    let ly = panelY - 55;
+    buildActionRow(scene, listX, ly, 'MOVE', MENU_COLORS.teal, 'Left / Right').forEach((o) => c.add(o));
+    ly += 42;
+    buildActionRow(scene, listX, ly, 'JUMP', MENU_COLORS.teal, 'Space / Jump button').forEach((o) => c.add(o));
+    ly += 42;
+    buildActionRow(scene, listX, ly, 'FIRE', MENU_COLORS.fire, 'Shoot a bolt').forEach((o) => c.add(o));
+    ly += 42;
+    buildActionRow(scene, listX, ly, 'SLAM', MENU_COLORS.slam, 'Staff ground slam').forEach((o) => c.add(o));
+    pages.push(c);
+  }
+  // Page 2 — goal
+  {
+    const c = scene.add.container(0, 0);
+    c.add(
+      scene.add
+        .text(panelX, panelY - 40, 'Your quest', {
+          fontFamily: 'Cinzel, serif',
+          fontSize: '26px',
+          fontStyle: '900',
+          color: '#1a2424',
+        })
+        .setOrigin(0.5)
+    );
+    const lines = [
+      '• Explore platforms and avoid falling',
+      '• Defeat knights with FIRE or SLAM',
+      '• Collect the key, then reach the door',
+      '• Clear each stage to advance',
+    ];
+    lines.forEach((line, i) => {
+      c.add(
+        scene.add
+          .text(panelX - 220, panelY + 10 + i * 36, line, {
+            fontFamily: 'Nunito, system-ui, sans-serif',
+            fontSize: '22px',
+            fontStyle: '700',
+            color: '#1a2424',
+          })
+          .setOrigin(0, 0.5)
+      );
+    });
+    pages.push(c);
+  }
+  // Page 3 — tips
+  {
+    const c = scene.add.container(0, 0);
+    c.add(
+      scene.add
+        .text(panelX, panelY - 40, 'Tips', {
+          fontFamily: 'Cinzel, serif',
+          fontSize: '26px',
+          fontStyle: '900',
+          color: '#1a2424',
+        })
+        .setOrigin(0.5)
+    );
+    const lines = [
+      '• Hold SLAM extras for a stronger wave',
+      '• FIRE travels straight — lead your shots',
+      '• On phones, use on-screen controls',
+      '• Landscape feels best; portrait still plays',
+    ];
+    lines.forEach((line, i) => {
+      c.add(
+        scene.add
+          .text(panelX - 240, panelY + 10 + i * 36, line, {
+            fontFamily: 'Nunito, system-ui, sans-serif',
+            fontSize: '22px',
+            fontStyle: '700',
+            color: '#1a2424',
+          })
+          .setOrigin(0, 0.5)
+      );
+    });
+    pages.push(c);
+  }
+
+  pages.forEach((p, i) => {
+    pagesRoot.add(p);
+    p.setVisible(i === 0);
+  });
+
+  let pageIndex = 0;
+  const dots = [];
+  const dotsY = panelY + panelH / 2 - 36;
+  const dotsStartX = panelX - panelW / 2 + 40;
+  for (let i = 0; i < 3; i++) {
+    const d = scene.add.graphics();
+    dots.push(d);
+    overlay.add(d);
+  }
+
+  const paintDots = () => {
+    dots.forEach((d, i) => {
+      d.clear();
+      const x = dotsStartX + i * 22;
+      if (i === pageIndex) {
+        d.fillStyle(MENU_COLORS.teal, 1);
+        d.fillCircle(x, dotsY, 6);
+        d.lineStyle(3, MENU_COLORS.teal, 0.35);
+        d.strokeCircle(x, dotsY, 9);
+      } else {
+        d.fillStyle(MENU_COLORS.ink, 0.25);
+        d.fillCircle(x, dotsY, 5);
+      }
+    });
+  };
+  paintDots();
+
+  const prevBtn = makePillButton(scene, panelX + panelW / 2 - 210, dotsY, 'Previous', {
+    width: 120,
+    height: 40,
+    variant: 'nav',
+    fontSize: 15,
+    depth: 210,
+  });
+  const nextBtn = makePillButton(scene, panelX + panelW / 2 - 70, dotsY, 'Next', {
+    width: 110,
+    height: 40,
+    variant: 'navPrimary',
+    fontSize: 15,
+    depth: 210,
+  });
+  overlay.add(prevBtn);
+  overlay.add(nextBtn);
+
+  const showPage = (idx) => {
+    pageIndex = Phaser.Math.Clamp(idx, 0, pages.length - 1);
+    pages.forEach((p, i) => p.setVisible(i === pageIndex));
+    paintDots();
+    prevBtn.setAlpha(pageIndex === 0 ? 0.45 : 1);
+    nextBtn.setLabel(pageIndex >= pages.length - 1 ? 'Done' : 'Next');
+  };
+  showPage(0);
+
+  prevBtn.on('pointerup', () => {
+    if (pageIndex > 0) showPage(pageIndex - 1);
+  });
+  nextBtn.on('pointerup', () => {
+    if (pageIndex < pages.length - 1) showPage(pageIndex + 1);
+    else {
+      overlay.destroy(true);
+      scene._instructionsOverlay = null;
+    }
+  });
+  closeBtn.on('pointerup', () => {
+    overlay.destroy(true);
+    scene._instructionsOverlay = null;
+  });
+
+  return overlay;
+}
+
 const menuScene = {
   key: 'Menu',
 
   preload: function () {
     this.load.image('background', './img/nature_background.jpg');
-    this.load.image('Page1', './img/instructions_page_1.png');
-    this.load.image('Page2', './img/instructions_page_2.png');
-    this.load.image('Page3', './img/instructions_page_3.png');
+    // Old Canva instruction PNGs intentionally not preloaded — overlay uses Graphics+Text.
   },
 
   create: function () {
     setMobileControlsVisible(false);
     this.add.image(1000, 400, 'background');
 
-    //Add title
-    this.add.text(760, 200, 'Mage Hopper', {
-      fontSize: '64px',
-      fontFamily: 'Augustine',
-      fill: '#000',
+    const layout = getMenuLayout(this);
+    const { cx, cy, titleSize, strokeTitle, ribbonFont, ribbonPadX, ribbonPadY, startW, startH, instrW, instrH, gap } =
+      layout;
+
+    // Title stack centered around (1000, 400)
+    const title = this.add
+      .text(cx, cy - startH - gap * 2 - 36, 'Mage Hopper', {
+        fontFamily: 'Cinzel, serif',
+        fontSize: `${titleSize}px`,
+        fontStyle: '900',
+        color: '#fff8e7',
+        stroke: '#1a2424',
+        strokeThickness: strokeTitle,
+        shadow: {
+          offsetX: 0,
+          offsetY: Math.max(4, Math.round(strokeTitle * 0.65)),
+          color: '#1f6e6e',
+          blur: 0,
+          fill: true,
+          stroke: true,
+        },
+      })
+      .setOrigin(0.5)
+      .setDepth(10);
+
+    // Soft non-interactive subtitle ribbon
+    const ribbonText = this.add
+      .text(0, 0, 'A PLATFORM ADVENTURE', {
+        fontFamily: 'Nunito, system-ui, sans-serif',
+        fontSize: `${ribbonFont}px`,
+        fontStyle: '800',
+        color: 'rgba(26,36,36,0.72)',
+      })
+      .setOrigin(0.5);
+    const rw = ribbonText.width + ribbonPadX * 2;
+    const rh = ribbonText.height + ribbonPadY;
+    const ribbonY = title.y + title.displayHeight / 2 + rh / 2 + Math.round(gap * 0.45);
+    const ribbonG = this.add.graphics();
+    ribbonG.fillStyle(MENU_COLORS.cream, 0.55);
+    ribbonG.fillRoundedRect(cx - rw / 2, ribbonY - rh / 2, rw, rh, 3);
+    ribbonText.setPosition(cx, ribbonY);
+    ribbonG.setDepth(10);
+    ribbonText.setDepth(11);
+
+    const startY = ribbonY + rh / 2 + gap + startH / 2;
+    const startBtn = makePillButton(this, cx, startY, 'Start Game', {
+      width: startW,
+      height: startH,
+      variant: 'primary',
+      fontSize: Math.round(startH * 0.38),
+      depth: 20,
+    });
+    startBtn.on('pointerup', () => {
+      this.scene.start('Game');
     });
 
-    // Add menu text/buttons
-    const startGame = this.add
-      .text(850, 400, 'Start Game', {
-        fontSize: '32px',
-        fill: '#000',
-        fontFamily: 'Roboto',
-      });
-    enlargeTextHitArea(startGame);
-
-    startGame.on('pointerdown', () => {
-      this.scene.start('Game'); // Transition to game scene
+    const instrY = startY + startH / 2 + gap * 0.85 + instrH / 2;
+    const instrBtn = makePillButton(this, cx, instrY, 'Instructions', {
+      width: instrW,
+      height: instrH,
+      variant: 'secondary',
+      fontSize: Math.round(instrH * 0.38),
+      depth: 20,
+    });
+    instrBtn.on('pointerup', () => {
+      openInstructionsOverlay(this);
     });
 
-    startGame.setInteractive().on('pointerover', () => {
-      startGame.setShadow(2, 2, 'rgba(42, 145, 113,0.5)', 2);
-      startGame.setColor('rgba(42, 145, 145,0.9)');
-    });
-    startGame.setInteractive().on('pointerout', () => {
-      startGame.setShadow(0, 0, 'rgba(0,0,0,0.5)', 1);
-      startGame.setColor('rgb(0,0,0)');
-    });
-
-    //setup instructions button
-    const instructions = this.add
-      .text(850, 450, 'Instructions', {
-        fontSize: '32px',
-        fill: '#000',
-        fontFamily: 'Roboto',
-      });
-    enlargeTextHitArea(instructions);
-
-    instructions.setInteractive().on('pointerover', () => {
-      instructions.setShadow(2, 2, 'rgba(42, 145, 113,0.5)', 2);
-      instructions.setColor('rgba(42, 145, 145,0.9)');
-    });
-    instructions.setInteractive().on('pointerout', () => {
-      instructions.setShadow(0, 0, 'rgba(0,0,0,0.5)', 1);
-      instructions.setColor('rgb(0,0,0)');
-    });
-
-    //making instruction interactive
-    instructions.on('pointerdown', () => {
-      let index = 1;
-      const instructionImage = this.add.image(1000, 450, 'Page' + index); // Show instructions
-      const nextPage = this.add
-        .text(1350, 100, 'Next Page', {
-          fontSize: '32px',
-          fill: 'rgba(42, 145, 145,0.9)',
-          fontFamily: 'Roboto',
-        })
-        .setInteractive();
-
-      //add hover effect to next page button
-      nextPage.setInteractive().on('pointerover', () => {
-        nextPage.setShadow(2, 2, 'rgba(0,0,0,0.5)', 2);
-        nextPage.setColor('rgb(0,0,0)');
-      });
-      nextPage.setInteractive().on('pointerout', () => {
-        nextPage.setShadow(1, 1, 'rgba(42, 145, 113,0.5)', 2);
-        nextPage.setColor('rgba(42, 145, 145,0.9)');
-      });
-
-      nextPage.on('pointerdown', () => {
-        if (index < 3) {
-          index++;
-          instructionImage.setTexture('Page' + index);
-        } else {
-          // add a closing function
-          nextPage.destroy();
-          const closeinstructions = this.add
-            .text(1350, 100, 'Close', {
-              fontSize: '32px',
-              fill: 'rgb(145, 42, 42)',
-              fontFamily: 'Roboto',
-            })
-            .setInteractive();
-
-          closeinstructions.setInteractive().on('pointerover', () => {
-            closeinstructions.setShadow(2, 2, 'rgba(145, 42, 42, 0.5)', 1);
-            closeinstructions.setColor('rgb(145, 42, 42)');
-          });
-          closeinstructions.setInteractive().on('pointerout', () => {
-            closeinstructions.setShadow(1, 1, 'rgba(145, 42, 42,0.5)', 2);
-            closeinstructions.setColor('rgb(145, 42, 42)');
-          });
-          closeinstructions.on('pointerdown', () => {
-            this.scene.start('Menu');
-          });
-        }
-      });
-
-      //add previous page function
-      const prevPage = this.add
-        .text(525, 100, 'Previous Page', {
-          fontSize: '32px',
-          fill: 'rgba(42, 145, 145,0.9)',
-          fontFamily: 'Roboto',
-        })
-        .setInteractive();
-
-      //add hover effect to next page button
-      prevPage.setInteractive().on('pointerover', () => {
-        prevPage.setShadow(2, 2, 'rgba(0,0,0,0.5)', 2);
-        prevPage.setColor('rgb(0,0,0)');
-      });
-      prevPage.setInteractive().on('pointerout', () => {
-        prevPage.setShadow(1, 1, 'rgba(42, 145, 113,0.5)', 2);
-        prevPage.setColor('rgba(42, 145, 145,0.9)');
-      });
-
-      prevPage.on('pointerdown', () => {
-        if (index > 1) {
-          index--;
-          instructionImage.setTexture('Page' + index);
-        }
-      });
-    });
+    // Scale-aware sizes are computed once from current FIT display size in getMenuLayout().
   },
 };
 

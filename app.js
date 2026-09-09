@@ -1464,9 +1464,6 @@ const gameScene = {
   create: function () {
     hideMenuDomUi();
     hideInstructionsDomUi();
-
-    hideMenuDomUi();
-
     setMobileControlsVisible(true);
     this.add.image(1000, 400, 'background');
 

@@ -397,7 +397,7 @@ function makePillButton(scene, x, y, label, style) {
     .zone(x, y, width + pad * 2, height + pad * 2)
     .setOrigin(0.5)
     .setDepth(depth + 1);
-  zone.setInteractive();
+  zone.setInteractive({ useHandCursor: true });
 
   const palette = () => {
     if (variant === 'primary' || variant === 'navPrimary') {

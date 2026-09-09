@@ -185,3 +185,30 @@ body {
     font-size: 0.72rem;
   }
 }
+
+
+/* Transparent menu hit targets — sit on top of letterboxed canvas pills (Android taps). */
+#menu-dom-ui {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  pointer-events: none;
+}
+#menu-dom-ui.show {
+  display: block;
+}
+#menu-dom-ui button {
+  position: fixed;
+  pointer-events: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: transparent;
+  font-size: 0;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  cursor: pointer;
+}

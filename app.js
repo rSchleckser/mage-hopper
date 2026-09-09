@@ -277,37 +277,58 @@ function getMenuLayout(scene) {
   const WORLD_W = 1890;
   const WORLD_H = 890;
   const cx = 1000;
-  const cy = 400;
+  const cy = 445; // slightly below true center so stack sits in the letterbox band
   const canvas = scene.game?.canvas;
-  // Prefer live CSS canvas size — displaySize can be stale on first Android paint.
   const cssW = (canvas && canvas.clientWidth) || scene.scale.displaySize?.width || WORLD_W;
   const cssH = (canvas && canvas.clientHeight) || scene.scale.displaySize?.height || WORLD_H;
   const ds = Math.min(cssW / WORLD_W, cssH / WORLD_H) || 1;
+  // Portrait FIT letterbox: canvas is wide+short in CSS → ds is small.
+  const compact = ds < 0.55;
 
-  // Keep Start ≥ ~48 CSS px tall when FIT letterboxes portrait phones.
-  const designedStartH = 58;
-  const targetCss = 48;
-  const needed = targetCss / Math.max(ds, 0.12);
-  // Cap inflate so the stack matches the approved mobile mock (title ≫ CTAs, not mega-pills).
-  const inflate = Math.max(1, Math.min(needed / designedStartH, 3.2));
-  const compact = inflate > 1.15;
-  const titleInflate = Math.min(inflate, compact ? 2.15 : 1.35);
+  // Desktop-first sizes (no inflate blow-up). Mobile gets a modest bump then FIT-TO-STRIP.
+  let titleSize = compact ? 78 : 112;
+  let startH = compact ? 52 : 58;
+  let startW = compact ? 280 : 300;
+  let instrH = compact ? 44 : 50;
+  let instrW = compact ? 220 : 230;
+  let ribbonFont = compact ? 16 : 22;
+  let ribbonPadX = compact ? 22 : 28;
+  let ribbonPadY = compact ? 8 : 10;
+  let gap = compact ? 12 : 20;
 
-  const startH = Math.round(designedStartH * inflate);
-  const startW = Math.round((compact ? 260 : 300) * Math.min(inflate, 2.4));
-  const instrH = Math.round((compact ? 46 : 50) * Math.min(inflate, 2.6));
-  const instrW = Math.round((compact ? 210 : 230) * Math.min(inflate, 2.4));
-  const titleSize = Math.round((compact ? 96 : 118) * titleInflate);
-  const ribbonPadX = Math.round(26 * Math.min(inflate, 2.0));
-  const ribbonPadY = Math.round(9 * Math.min(inflate, 2.0));
-  const ribbonFont = Math.round((compact ? 17 : 22) * Math.min(inflate, 1.85));
-  const gap = Math.round((compact ? 14 : 20) * Math.min(inflate, 1.85));
+  // Prefer Start ≥ ~44 CSS px when it still fits; never force overflow.
+  const minStartWorld = Math.ceil(44 / Math.max(ds, 0.12));
+  if (compact && startH < minStartWorld) {
+    startH = Math.min(minStartWorld, 70); // hard cap — strip is short
+    startW = Math.min(Math.round(startW * (startH / 52)), 340);
+    instrH = Math.min(Math.round(instrH * (startH / 52)), 56);
+    instrW = Math.min(Math.round(instrW * (startH / 52)), 280);
+  }
+
+  // Approximate stack height and shrink uniformly so it fits ~74% of world height.
+  const maxStack = Math.round(WORLD_H * 0.74);
+  const ribbonHApprox = ribbonFont + ribbonPadY + 4;
+  const estimate = () =>
+    titleSize + ribbonHApprox + startH + instrH + gap * 3.3 + Math.round(titleSize * 0.15);
+  let guard = 0;
+  while (estimate() > maxStack && guard < 24) {
+    guard += 1;
+    const s = maxStack / estimate();
+    titleSize = Math.max(42, Math.floor(titleSize * s));
+    startH = Math.max(36, Math.floor(startH * s));
+    startW = Math.max(160, Math.floor(startW * s));
+    instrH = Math.max(32, Math.floor(instrH * s));
+    instrW = Math.max(140, Math.floor(instrW * s));
+    ribbonFont = Math.max(11, Math.floor(ribbonFont * s));
+    ribbonPadX = Math.max(10, Math.floor(ribbonPadX * s));
+    ribbonPadY = Math.max(4, Math.floor(ribbonPadY * s));
+    gap = Math.max(6, Math.floor(gap * s));
+  }
 
   return {
     cx,
     cy,
     ds,
-    inflate,
     compact,
     titleSize,
     ribbonFont,
@@ -318,7 +339,8 @@ function getMenuLayout(scene) {
     instrW,
     instrH,
     gap,
-    strokeTitle: Math.max(6, Math.round(titleSize * 0.075)),
+    strokeTitle: Math.max(4, Math.round(titleSize * 0.08)),
+    maxStack,
   };
 }
 
@@ -820,12 +842,87 @@ function openInstructionsOverlay(scene) {
       scene._instructionsOverlay = null;
     }
   });
-  closeBtn.on('pointerup', () => {
+    const closeOverlay = () => {
+    if (!scene._instructionsOverlay) return;
     overlay.destroy(true);
     scene._instructionsOverlay = null;
-  });
+    scene.events.emit('instructions-closed');
+  };
+  closeBtn.setOnActivate(closeOverlay);  return overlay;
+}
 
-  return overlay;
+
+// --- Menu DOM hit overlays (Android Chrome: Phaser canvas taps are unreliable) ---
+function worldToCanvasCss(scene, wx, wy, ww, wh) {
+  const canvas = scene.game.canvas;
+  const rect = canvas.getBoundingClientRect();
+  const sx = rect.width / 1890;
+  const sy = rect.height / 890;
+  return {
+    left: rect.left + (wx - ww / 2) * sx,
+    top: rect.top + (wy - wh / 2) * sy,
+    width: ww * sx,
+    height: wh * sy,
+  };
+}
+
+function ensureMenuDomUi() {
+  let root = document.getElementById('menu-dom-ui');
+  if (root) return root;
+  root = document.createElement('div');
+  root.id = 'menu-dom-ui';
+  root.setAttribute('aria-hidden', 'true');
+  root.innerHTML =
+    '<button type="button" id="menu-dom-start" aria-label="Start Game"></button>' +
+    '<button type="button" id="menu-dom-instr" aria-label="Instructions"></button>';
+  document.body.appendChild(root);
+  return root;
+}
+
+function hideMenuDomUi() {
+  const root = document.getElementById('menu-dom-ui');
+  if (!root) return;
+  root.classList.remove('show');
+  root.setAttribute('aria-hidden', 'true');
+  root.style.display = 'none';
+}
+
+function syncMenuDomUi(scene, startHit, instrHit, handlers) {
+  const root = ensureMenuDomUi();
+  const startBtn = document.getElementById('menu-dom-start');
+  const instrBtn = document.getElementById('menu-dom-instr');
+  if (!startBtn || !instrBtn) return;
+
+  const place = (el, hit) => {
+    const box = worldToCanvasCss(scene, hit.x, hit.y, hit.w, hit.h);
+    el.style.left = `${box.left}px`;
+    el.style.top = `${box.top}px`;
+    el.style.width = `${Math.max(box.width, 44)}px`;
+    el.style.height = `${Math.max(box.height, 44)}px`;
+  };
+  place(startBtn, startHit);
+  place(instrBtn, instrHit);
+
+  root.style.display = 'block';
+  root.classList.add('show');
+  root.setAttribute('aria-hidden', 'false');
+
+  // Rebind once per sync (clone to drop old listeners)
+  const rebind = (el, fn) => {
+    const next = el.cloneNode(true);
+    el.parentNode.replaceChild(next, el);
+    const fire = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (typeof fn === 'function') fn();
+    };
+    next.addEventListener('click', fire, { passive: false });
+    next.addEventListener('pointerup', fire, { passive: false });
+    next.addEventListener('touchend', fire, { passive: false });
+    return next;
+  };
+  rebind(document.getElementById('menu-dom-start'), handlers.onStart);
+  rebind(document.getElementById('menu-dom-instr'), handlers.onInstr);
 }
 
 const menuScene = {
@@ -833,11 +930,14 @@ const menuScene = {
 
   preload: function () {
     this.load.image('background', './img/nature_background.jpg');
-    // Old Canva instruction PNGs intentionally not preloaded — overlay uses Graphics+Text.
   },
 
   create: function () {
     setMobileControlsVisible(false);
+    // Don't let the rotate banner compete with menu taps.
+    if (typeof dismissRotateHint === 'function') {
+      try { dismissRotateHint(); } catch (e) {}
+    }
 
     const destroyMenu = () => {
       if (this._menuNodes) {
@@ -846,6 +946,7 @@ const menuScene = {
         });
       }
       this._menuNodes = [];
+      hideMenuDomUi();
     };
 
     const build = () => {
@@ -859,9 +960,32 @@ const menuScene = {
       const { cx, cy, titleSize, strokeTitle, ribbonFont, ribbonPadX, ribbonPadY, startW, startH, instrW, instrH, gap } =
         layout;
 
-      // Title stack — match approved mock wordmark (ALL CAPS Cinzel).
+      // Measure stack, then center vertically inside the letterbox strip.
+      const titleProbe = this.add
+        .text(0, 0, 'MAGE HOPPER', {
+          fontFamily: 'Cinzel, serif',
+          fontSize: `${titleSize}px`,
+          fontStyle: '900',
+        })
+        .setVisible(false);
+      const ribbonProbe = this.add
+        .text(0, 0, 'A PLATFORM ADVENTURE', {
+          fontFamily: 'Nunito, system-ui, sans-serif',
+          fontSize: `${ribbonFont}px`,
+          fontStyle: '800',
+        })
+        .setVisible(false);
+      const titleH = titleProbe.height;
+      const rh = ribbonProbe.height + ribbonPadY;
+      titleProbe.destroy();
+      ribbonProbe.destroy();
+
+      const stackH = titleH + Math.round(gap * 0.45) + rh + gap + startH + Math.round(gap * 0.85) + instrH;
+      const topY = cy - stackH / 2;
+      const titleY = topY + titleH / 2;
+
       const title = this.add
-        .text(cx, cy - startH - gap * 2 - 36, 'MAGE HOPPER', {
+        .text(cx, titleY, 'MAGE HOPPER', {
           fontFamily: 'Cinzel, serif',
           fontSize: `${titleSize}px`,
           fontStyle: '900',
@@ -870,7 +994,7 @@ const menuScene = {
           strokeThickness: strokeTitle,
           shadow: {
             offsetX: 0,
-            offsetY: Math.max(4, Math.round(strokeTitle * 0.65)),
+            offsetY: Math.max(3, Math.round(strokeTitle * 0.55)),
             color: '#1f6e6e',
             blur: 0,
             fill: true,
@@ -890,8 +1014,7 @@ const menuScene = {
         })
         .setOrigin(0.5);
       const rw = ribbonText.width + ribbonPadX * 2;
-      const rh = ribbonText.height + ribbonPadY;
-      const ribbonY = title.y + title.displayHeight / 2 + rh / 2 + Math.round(gap * 0.45);
+      const ribbonY = titleY + titleH / 2 + rh / 2 + Math.round(gap * 0.45);
       const ribbonG = this.add.graphics();
       ribbonG.fillStyle(MENU_COLORS.cream, 0.55);
       ribbonG.fillRoundedRect(cx - rw / 2, ribbonY - rh / 2, rw, rh, 3);
@@ -908,9 +1031,11 @@ const menuScene = {
         fontSize: Math.round(startH * 0.38),
         depth: 20,
       });
-      startBtn.setOnActivate(() => {
+      const onStart = () => {
+        hideMenuDomUi();
         this.scene.start('Game');
-      });
+      };
+      startBtn.setOnActivate(onStart);
       nodes.push(startBtn);
 
       const instrY = startY + startH / 2 + gap * 0.85 + instrH / 2;
@@ -921,20 +1046,40 @@ const menuScene = {
         fontSize: Math.round(instrH * 0.38),
         depth: 20,
       });
-      instrBtn.setOnActivate(() => {
+      const onInstr = () => {
+        hideMenuDomUi();
         openInstructionsOverlay(this);
-      });
+      };
+      instrBtn.setOnActivate(onInstr);
       nodes.push(instrBtn);
+
+      if (!this._instrCloseBound) {
+        this._instrCloseBound = true;
+        this.events.on('instructions-closed', () => {
+          if (this.sys.settings.active) build();
+        });
+        this.events.once('shutdown', () => {
+          this.events.off('instructions-closed');
+          this._instrCloseBound = false;
+        });
+      }
+
+      // Invisible DOM hit targets aligned to visible pills — reliable on Android Chrome.
+      const pad = Math.max(10, Math.round(startH * 0.15));
+      syncMenuDomUi(
+        this,
+        { x: cx, y: startY, w: startW + pad * 2, h: startH + pad * 2 },
+        { x: cx, y: instrY, w: instrW + pad * 2, h: instrH + pad * 2 },
+        { onStart, onInstr }
+      );
     };
 
     build();
 
-    // Defer one rebuild after first layout — Android Chrome often reports wrong
-    // canvas client size on the initial Menu create (address bar / visualViewport).
-    this.time.delayedCall(120, () => {
+    this.time.delayedCall(100, () => {
       if (this.sys.settings.active) build();
     });
-    this.time.delayedCall(400, () => {
+    this.time.delayedCall(350, () => {
       if (this.sys.settings.active) build();
     });
 
@@ -946,8 +1091,18 @@ const menuScene = {
       });
     };
     this.scale.on('resize', onResize);
+    window.addEventListener('scroll', onResize, { passive: true });
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', onResize);
+      window.visualViewport.addEventListener('scroll', onResize);
+    }
     this.events.once('shutdown', () => {
       this.scale.off('resize', onResize);
+      window.removeEventListener('scroll', onResize);
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', onResize);
+        window.visualViewport.removeEventListener('scroll', onResize);
+      }
       if (this._menuResizeTimer) this._menuResizeTimer.remove(false);
       destroyMenu();
     });
@@ -1178,6 +1333,8 @@ const gameScene = {
   },
 
   create: function () {
+    hideMenuDomUi();
+
     setMobileControlsVisible(true);
     this.add.image(1000, 400, 'background');
 

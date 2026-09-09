@@ -278,25 +278,30 @@ function getMenuLayout(scene) {
   const WORLD_H = 890;
   const cx = 1000;
   const cy = 400;
-  const displayW = scene.scale.displaySize?.width || WORLD_W;
-  const displayH = scene.scale.displaySize?.height || WORLD_H;
-  const ds = Math.min(displayW / WORLD_W, displayH / WORLD_H) || 1;
-  // Inflate world UI when FIT letterboxing shrinks CSS pixels (portrait phones).
+  const canvas = scene.game?.canvas;
+  // Prefer live CSS canvas size — displaySize can be stale on first Android paint.
+  const cssW = (canvas && canvas.clientWidth) || scene.scale.displaySize?.width || WORLD_W;
+  const cssH = (canvas && canvas.clientHeight) || scene.scale.displaySize?.height || WORLD_H;
+  const ds = Math.min(cssW / WORLD_W, cssH / WORLD_H) || 1;
+
+  // Keep Start ≥ ~48 CSS px tall when FIT letterboxes portrait phones.
   const designedStartH = 58;
   const targetCss = 48;
   const needed = targetCss / Math.max(ds, 0.12);
-  const inflate = Math.max(1, Math.min(needed / designedStartH, 4.2));
+  // Cap inflate so the stack matches the approved mobile mock (title ≫ CTAs, not mega-pills).
+  const inflate = Math.max(1, Math.min(needed / designedStartH, 3.2));
   const compact = inflate > 1.15;
+  const titleInflate = Math.min(inflate, compact ? 2.15 : 1.35);
 
   const startH = Math.round(designedStartH * inflate);
-  const startW = Math.round((compact ? 240 : 280) * Math.min(inflate, 2.8));
-  const instrH = Math.round((compact ? 44 : 48) * inflate);
-  const instrW = Math.round((compact ? 200 : 220) * Math.min(inflate, 2.8));
-  const titleSize = Math.round((compact ? 92 : 112) * Math.min(inflate, 2.4));
-  const ribbonPadX = Math.round(28 * Math.min(inflate, 2.2));
-  const ribbonPadY = Math.round(10 * Math.min(inflate, 2.2));
-  const ribbonFont = Math.round((compact ? 18 : 22) * Math.min(inflate, 2.0));
-  const gap = Math.round((compact ? 18 : 22) * Math.min(inflate, 2.0));
+  const startW = Math.round((compact ? 260 : 300) * Math.min(inflate, 2.4));
+  const instrH = Math.round((compact ? 46 : 50) * Math.min(inflate, 2.6));
+  const instrW = Math.round((compact ? 210 : 230) * Math.min(inflate, 2.4));
+  const titleSize = Math.round((compact ? 96 : 118) * titleInflate);
+  const ribbonPadX = Math.round(26 * Math.min(inflate, 2.0));
+  const ribbonPadY = Math.round(9 * Math.min(inflate, 2.0));
+  const ribbonFont = Math.round((compact ? 17 : 22) * Math.min(inflate, 1.85));
+  const gap = Math.round((compact ? 14 : 20) * Math.min(inflate, 1.85));
 
   return {
     cx,
@@ -313,7 +318,7 @@ function getMenuLayout(scene) {
     instrW,
     instrH,
     gap,
-    strokeTitle: Math.max(6, Math.round(titleSize * 0.08)),
+    strokeTitle: Math.max(6, Math.round(titleSize * 0.075)),
   };
 }
 
@@ -386,6 +391,14 @@ function makePillButton(scene, x, y, label, style) {
   container.setDepth(depth);
   container.setSize(width, height);
 
+  // World-space Zone (NOT nested in container) — Container hit areas are unreliable on Android Chrome + FIT scale.
+  const pad = Math.max(16, Math.round(height * 0.25));
+  const zone = scene.add
+    .zone(x, y, width + pad * 2, height + pad * 2)
+    .setOrigin(0.5)
+    .setDepth(depth + 1);
+  zone.setInteractive();
+
   const palette = () => {
     if (variant === 'primary' || variant === 'navPrimary') {
       return {
@@ -410,7 +423,6 @@ function makePillButton(scene, x, y, label, style) {
         highlight: false,
       };
     }
-    // secondary / nav
     return {
       solidFill: MENU_COLORS.cream,
       solidAlpha: variant === 'nav' ? 1 : 0.95,
@@ -425,6 +437,7 @@ function makePillButton(scene, x, y, label, style) {
   };
 
   let state = 'up';
+  let armed = false;
   const paint = () => {
     const base = palette();
     if (state === 'hover' && (variant === 'primary' || variant === 'navPrimary')) {
@@ -451,30 +464,76 @@ function makePillButton(scene, x, y, label, style) {
   };
   paint();
 
-  container.setInteractive(
-    new Phaser.Geom.Rectangle(-width / 2, -height / 2, width, height),
-    Phaser.Geom.Rectangle.Contains
-  );
-  container.on('pointerover', () => {
-    state = 'hover';
-    paint();
-  });
-  container.on('pointerout', () => {
-    state = 'up';
-    paint();
-  });
-  container.on('pointerdown', () => {
+  const activate = () => {
+    if (typeof container._onActivate === 'function') container._onActivate();
+  };
+  const press = () => {
+    armed = true;
     state = 'down';
     paint();
+  };
+  const release = (shouldFire) => {
+    const wasArmed = armed;
+    armed = false;
+    state = 'up';
+    paint();
+    if (shouldFire && wasArmed) activate();
+  };
+
+  zone.on('pointerover', () => {
+    if (!armed) {
+      state = 'hover';
+      paint();
+    }
   });
-  container.on('pointerup', () => {
-    state = 'hover';
+  zone.on('pointerout', () => {
+    if (!isTouchDevice()) {
+      armed = false;
+      state = 'up';
+      paint();
+    }
+  });
+  zone.on('pointerdown', (pointer) => {
+    if (pointer && pointer.event && pointer.event.preventDefault) pointer.event.preventDefault();
+    press();
+    // Touch: fire on press so a 1px finger slip can't cancel Start/Instructions.
+    if (isTouchDevice()) release(true);
+  });
+  zone.on('pointerup', () => {
+    if (!isTouchDevice()) release(true);
+  });
+  zone.on('pointerupoutside', () => {
+    armed = false;
+    state = 'up';
     paint();
   });
 
   container.setLabel = (s) => txt.setText(s);
   container.getText = () => txt;
   container.repaint = paint;
+  container.setOnActivate = (fn) => {
+    container._onActivate = fn;
+  };
+  container._hitZone = zone;
+  // Destroy zone with the visual container
+  const prevDestroy = container.destroy.bind(container);
+  container.destroy = (...args) => {
+    if (zone && zone.destroy) zone.destroy();
+    return prevDestroy(...args);
+  };
+  // Bridge legacy .on('pointerup') used by Instructions overlay nav buttons
+  const origOn = container.on.bind(container);
+  container.on = (event, fn, context) => {
+    if (event === 'pointerup' || event === 'pointerdown') {
+      const prev = container._onActivate;
+      container._onActivate = () => {
+        if (typeof prev === 'function') prev();
+        fn.call(context || container);
+      };
+      return container;
+    }
+    return origOn(event, fn, context);
+  };
   return container;
 }
 
@@ -779,77 +838,119 @@ const menuScene = {
 
   create: function () {
     setMobileControlsVisible(false);
-    this.add.image(1000, 400, 'background');
 
-    const layout = getMenuLayout(this);
-    const { cx, cy, titleSize, strokeTitle, ribbonFont, ribbonPadX, ribbonPadY, startW, startH, instrW, instrH, gap } =
-      layout;
+    const destroyMenu = () => {
+      if (this._menuNodes) {
+        this._menuNodes.forEach((n) => {
+          if (n && n.destroy) n.destroy(true);
+        });
+      }
+      this._menuNodes = [];
+    };
 
-    // Title stack centered around (1000, 400)
-    const title = this.add
-      .text(cx, cy - startH - gap * 2 - 36, 'Mage Hopper', {
-        fontFamily: 'Cinzel, serif',
-        fontSize: `${titleSize}px`,
-        fontStyle: '900',
-        color: '#fff8e7',
-        stroke: '#1a2424',
-        strokeThickness: strokeTitle,
-        shadow: {
-          offsetX: 0,
-          offsetY: Math.max(4, Math.round(strokeTitle * 0.65)),
-          color: '#1f6e6e',
-          blur: 0,
-          fill: true,
-          stroke: true,
-        },
-      })
-      .setOrigin(0.5)
-      .setDepth(10);
+    const build = () => {
+      destroyMenu();
+      const nodes = [];
+      this._menuNodes = nodes;
 
-    // Soft non-interactive subtitle ribbon
-    const ribbonText = this.add
-      .text(0, 0, 'A PLATFORM ADVENTURE', {
-        fontFamily: 'Nunito, system-ui, sans-serif',
-        fontSize: `${ribbonFont}px`,
-        fontStyle: '800',
-        color: 'rgba(26,36,36,0.72)',
-      })
-      .setOrigin(0.5);
-    const rw = ribbonText.width + ribbonPadX * 2;
-    const rh = ribbonText.height + ribbonPadY;
-    const ribbonY = title.y + title.displayHeight / 2 + rh / 2 + Math.round(gap * 0.45);
-    const ribbonG = this.add.graphics();
-    ribbonG.fillStyle(MENU_COLORS.cream, 0.55);
-    ribbonG.fillRoundedRect(cx - rw / 2, ribbonY - rh / 2, rw, rh, 3);
-    ribbonText.setPosition(cx, ribbonY);
-    ribbonG.setDepth(10);
-    ribbonText.setDepth(11);
+      nodes.push(this.add.image(1000, 400, 'background'));
 
-    const startY = ribbonY + rh / 2 + gap + startH / 2;
-    const startBtn = makePillButton(this, cx, startY, 'Start Game', {
-      width: startW,
-      height: startH,
-      variant: 'primary',
-      fontSize: Math.round(startH * 0.38),
-      depth: 20,
+      const layout = getMenuLayout(this);
+      const { cx, cy, titleSize, strokeTitle, ribbonFont, ribbonPadX, ribbonPadY, startW, startH, instrW, instrH, gap } =
+        layout;
+
+      // Title stack — match approved mock wordmark (ALL CAPS Cinzel).
+      const title = this.add
+        .text(cx, cy - startH - gap * 2 - 36, 'MAGE HOPPER', {
+          fontFamily: 'Cinzel, serif',
+          fontSize: `${titleSize}px`,
+          fontStyle: '900',
+          color: '#fff8e7',
+          stroke: '#1a2424',
+          strokeThickness: strokeTitle,
+          shadow: {
+            offsetX: 0,
+            offsetY: Math.max(4, Math.round(strokeTitle * 0.65)),
+            color: '#1f6e6e',
+            blur: 0,
+            fill: true,
+            stroke: true,
+          },
+        })
+        .setOrigin(0.5)
+        .setDepth(10);
+      nodes.push(title);
+
+      const ribbonText = this.add
+        .text(0, 0, 'A PLATFORM ADVENTURE', {
+          fontFamily: 'Nunito, system-ui, sans-serif',
+          fontSize: `${ribbonFont}px`,
+          fontStyle: '800',
+          color: 'rgba(26,36,36,0.72)',
+        })
+        .setOrigin(0.5);
+      const rw = ribbonText.width + ribbonPadX * 2;
+      const rh = ribbonText.height + ribbonPadY;
+      const ribbonY = title.y + title.displayHeight / 2 + rh / 2 + Math.round(gap * 0.45);
+      const ribbonG = this.add.graphics();
+      ribbonG.fillStyle(MENU_COLORS.cream, 0.55);
+      ribbonG.fillRoundedRect(cx - rw / 2, ribbonY - rh / 2, rw, rh, 3);
+      ribbonText.setPosition(cx, ribbonY);
+      ribbonG.setDepth(10);
+      ribbonText.setDepth(11);
+      nodes.push(ribbonG, ribbonText);
+
+      const startY = ribbonY + rh / 2 + gap + startH / 2;
+      const startBtn = makePillButton(this, cx, startY, 'Start Game', {
+        width: startW,
+        height: startH,
+        variant: 'primary',
+        fontSize: Math.round(startH * 0.38),
+        depth: 20,
+      });
+      startBtn.setOnActivate(() => {
+        this.scene.start('Game');
+      });
+      nodes.push(startBtn);
+
+      const instrY = startY + startH / 2 + gap * 0.85 + instrH / 2;
+      const instrBtn = makePillButton(this, cx, instrY, 'Instructions', {
+        width: instrW,
+        height: instrH,
+        variant: 'secondary',
+        fontSize: Math.round(instrH * 0.38),
+        depth: 20,
+      });
+      instrBtn.setOnActivate(() => {
+        openInstructionsOverlay(this);
+      });
+      nodes.push(instrBtn);
+    };
+
+    build();
+
+    // Defer one rebuild after first layout — Android Chrome often reports wrong
+    // canvas client size on the initial Menu create (address bar / visualViewport).
+    this.time.delayedCall(120, () => {
+      if (this.sys.settings.active) build();
     });
-    startBtn.on('pointerup', () => {
-      this.scene.start('Game');
+    this.time.delayedCall(400, () => {
+      if (this.sys.settings.active) build();
     });
 
-    const instrY = startY + startH / 2 + gap * 0.85 + instrH / 2;
-    const instrBtn = makePillButton(this, cx, instrY, 'Instructions', {
-      width: instrW,
-      height: instrH,
-      variant: 'secondary',
-      fontSize: Math.round(instrH * 0.38),
-      depth: 20,
+    const onResize = () => {
+      if (!this.sys.settings.active) return;
+      if (this._menuResizeTimer) this._menuResizeTimer.remove(false);
+      this._menuResizeTimer = this.time.delayedCall(80, () => {
+        if (this.sys.settings.active) build();
+      });
+    };
+    this.scale.on('resize', onResize);
+    this.events.once('shutdown', () => {
+      this.scale.off('resize', onResize);
+      if (this._menuResizeTimer) this._menuResizeTimer.remove(false);
+      destroyMenu();
     });
-    instrBtn.on('pointerup', () => {
-      openInstructionsOverlay(this);
-    });
-
-    // Scale-aware sizes are computed once from current FIT display size in getMenuLayout().
   },
 };
 
@@ -2034,6 +2135,10 @@ const config = {
   type: Phaser.AUTO,
   parent: "game-container",
   backgroundColor: "#000000",
+  input: {
+    activePointers: 3,
+    windowEvents: true,
+  },
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,

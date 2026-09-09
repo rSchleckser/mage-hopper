@@ -579,10 +579,160 @@ function buildActionRow(scene, x, y, tag, tagColor, desc) {
   return items;
 }
 
+function shouldUseDomInstructions() {
+  // Portrait / narrow / touch: Phaser modal is tiny inside the letterbox strip.
+  const narrow = Math.min(window.innerWidth, window.innerHeight) < 900;
+  const portrait = window.matchMedia('(orientation: portrait)').matches;
+  return isTouchDevice() || (narrow && portrait) || window.innerWidth < 700;
+}
+
+function hideInstructionsDomUi() {
+  const root = document.getElementById('instructions-dom-ui');
+  if (!root) return;
+  root.classList.remove('show');
+  root.setAttribute('aria-hidden', 'true');
+  root.style.display = 'none';
+}
+
+function openInstructionsDomOverlay(scene) {
+  hideMenuDomUi();
+  hideInstructionsDomUi();
+
+  let root = document.getElementById('instructions-dom-ui');
+  if (!root) {
+    root = document.createElement('div');
+    root.id = 'instructions-dom-ui';
+    root.setAttribute('role', 'dialog');
+    root.setAttribute('aria-modal', 'true');
+    root.setAttribute('aria-label', 'How to play');
+    document.body.appendChild(root);
+  }
+
+  root.innerHTML = `
+    <div class="howto-panel">
+      <header class="howto-header">
+        <h2>How to play</h2>
+        <button type="button" class="howto-close" aria-label="Close">Close</button>
+      </header>
+      <div class="howto-body">
+        <section class="howto-page" data-page="0">
+          <div class="howto-keys" aria-hidden="true">
+            <div class="howto-keyrow">
+              <span class="howto-key">←</span>
+              <span class="howto-key">→</span>
+              <span class="howto-key wide">SPACE</span>
+            </div>
+            <div class="howto-keyrow">
+              <span class="howto-key fire">F</span>
+              <span class="howto-key slam">E</span>
+            </div>
+            <p class="howto-note">On mobile: JUMP / FIRE / SLAM buttons</p>
+          </div>
+          <ul class="howto-actions">
+            <li><span class="tag teal">MOVE</span> Left / Right</li>
+            <li><span class="tag teal">JUMP</span> Space / Jump button</li>
+            <li><span class="tag fire">FIRE</span> Shoot a bolt</li>
+            <li><span class="tag slam">SLAM</span> Staff ground slam</li>
+          </ul>
+        </section>
+        <section class="howto-page" data-page="1" hidden>
+          <h3>Your quest</h3>
+          <ul class="howto-list">
+            <li>Explore platforms and avoid falling</li>
+            <li>Defeat knights with FIRE or SLAM</li>
+            <li>Collect the key, then reach the door</li>
+            <li>Clear each stage to advance</li>
+          </ul>
+        </section>
+        <section class="howto-page" data-page="2" hidden>
+          <h3>Tips</h3>
+          <ul class="howto-list">
+            <li>Hold SLAM extras for a stronger wave</li>
+            <li>FIRE travels straight — lead your shots</li>
+            <li>On phones, use on-screen controls</li>
+            <li>Landscape feels best; portrait still plays</li>
+          </ul>
+        </section>
+      </div>
+      <footer class="howto-footer">
+        <div class="howto-dots" aria-hidden="true">
+          <span class="dot on"></span><span class="dot"></span><span class="dot"></span>
+        </div>
+        <div class="howto-nav">
+          <button type="button" class="howto-prev">Previous</button>
+          <button type="button" class="howto-next">Next</button>
+        </div>
+      </footer>
+    </div>
+  `;
+
+  root.style.display = 'flex';
+  root.classList.add('show');
+  root.setAttribute('aria-hidden', 'false');
+
+  // Marker so Phaser path knows DOM is open
+  scene._instructionsOverlay = { dom: true };
+
+  let pageIndex = 0;
+  const pages = Array.from(root.querySelectorAll('.howto-page'));
+  const dots = Array.from(root.querySelectorAll('.howto-dots .dot'));
+  const prevBtn = root.querySelector('.howto-prev');
+  const nextBtn = root.querySelector('.howto-next');
+  const closeBtn = root.querySelector('.howto-close');
+
+  const closeOverlay = () => {
+    hideInstructionsDomUi();
+    scene._instructionsOverlay = null;
+    scene.events.emit('instructions-closed');
+  };
+
+  const showPage = (idx) => {
+    pageIndex = Math.max(0, Math.min(pages.length - 1, idx));
+    pages.forEach((p, i) => {
+      if (i === pageIndex) p.removeAttribute('hidden');
+      else p.setAttribute('hidden', '');
+    });
+    dots.forEach((d, i) => d.classList.toggle('on', i === pageIndex));
+    prevBtn.disabled = pageIndex === 0;
+    prevBtn.style.opacity = pageIndex === 0 ? '0.45' : '1';
+    nextBtn.textContent = pageIndex >= pages.length - 1 ? 'Done' : 'Next';
+  };
+  showPage(0);
+
+  prevBtn.onclick = (e) => {
+    e.preventDefault();
+    if (pageIndex > 0) showPage(pageIndex - 1);
+  };
+  nextBtn.onclick = (e) => {
+    e.preventDefault();
+    if (pageIndex < pages.length - 1) showPage(pageIndex + 1);
+    else closeOverlay();
+  };
+  closeBtn.onclick = (e) => {
+    e.preventDefault();
+    closeOverlay();
+  };
+  // Backdrop tap closes
+  root.onclick = (e) => {
+    if (e.target === root) closeOverlay();
+  };
+
+  return scene._instructionsOverlay;
+}
+
 function openInstructionsOverlay(scene) {
   if (scene._instructionsOverlay) {
-    scene._instructionsOverlay.destroy(true);
+    if (scene._instructionsOverlay.dom) {
+      hideInstructionsDomUi();
+    } else if (scene._instructionsOverlay.destroy) {
+      scene._instructionsOverlay.destroy(true);
+    }
     scene._instructionsOverlay = null;
+  }
+
+  // Mobile / portrait: full-viewport DOM overlay (not tiny letterboxed Phaser modal).
+  if (shouldUseDomInstructions()) {
+    return openInstructionsDomOverlay(scene);
   }
 
   const overlay = scene.add.container(0, 0);
@@ -780,6 +930,13 @@ function openInstructionsOverlay(scene) {
   overlay.add(prevBtn);
   overlay.add(nextBtn);
 
+  const closeOverlay = () => {
+    if (!scene._instructionsOverlay) return;
+    overlay.destroy(true);
+    scene._instructionsOverlay = null;
+    scene.events.emit('instructions-closed');
+  };
+
   const showPage = (idx) => {
     pageIndex = Phaser.Math.Clamp(idx, 0, pages.length - 1);
     pages.forEach((p, i) => p.setVisible(i === pageIndex));
@@ -794,19 +951,13 @@ function openInstructionsOverlay(scene) {
   });
   nextBtn.on('pointerup', () => {
     if (pageIndex < pages.length - 1) showPage(pageIndex + 1);
-    else {
-      overlay.destroy(true);
-      scene._instructionsOverlay = null;
-    }
+    else closeOverlay();
   });
-    const closeOverlay = () => {
-    if (!scene._instructionsOverlay) return;
-    overlay.destroy(true);
-    scene._instructionsOverlay = null;
-    scene.events.emit('instructions-closed');
-  };
-  closeBtn.setOnActivate(closeOverlay);  return overlay;
+  closeBtn.setOnActivate(closeOverlay);
+  return overlay;
 }
+
+
 
 
 // --- Menu DOM hit overlays (Android Chrome: Phaser canvas taps are unreliable) ---
@@ -1312,7 +1463,7 @@ const gameScene = {
 
   create: function () {
     hideMenuDomUi();
-
+    hideInstructionsDomUi();
     setMobileControlsVisible(true);
     this.add.image(1000, 400, 'background');
 

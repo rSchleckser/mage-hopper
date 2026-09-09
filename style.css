@@ -212,3 +212,199 @@ body {
   touch-action: manipulation;
   cursor: pointer;
 }
+
+
+/* Full-viewport Instructions on mobile — not trapped in letterboxed canvas */
+#instructions-dom-ui {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  align-items: stretch;
+  justify-content: center;
+  padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
+    max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  box-sizing: border-box;
+  background: rgba(10, 16, 16, 0.72);
+  -webkit-tap-highlight-color: transparent;
+}
+#instructions-dom-ui.show {
+  display: flex;
+}
+#instructions-dom-ui .howto-panel {
+  display: flex;
+  flex-direction: column;
+  width: min(560px, 100%);
+  height: 100%;
+  max-height: 100%;
+  margin: 0 auto;
+  background: linear-gradient(180deg, #fff8e7 0%, #f3e6c8 100%);
+  border-radius: 16px;
+  border: 2px solid rgba(26, 36, 36, 0.35);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+  color: #1a2424;
+  font-family: Nunito, system-ui, sans-serif;
+}
+#instructions-dom-ui .howto-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px 10px;
+  flex-shrink: 0;
+}
+#instructions-dom-ui .howto-header h2 {
+  margin: 0;
+  font-family: Cinzel, serif;
+  font-weight: 900;
+  font-size: 1.45rem;
+}
+#instructions-dom-ui .howto-close,
+#instructions-dom-ui .howto-prev,
+#instructions-dom-ui .howto-next {
+  min-height: 48px;
+  min-width: 88px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 2px solid rgba(26, 36, 36, 0.35);
+  font-family: Nunito, system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 1rem;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+#instructions-dom-ui .howto-close {
+  background: #f5d0d0;
+  color: #912a2a;
+  border-color: rgba(145, 42, 42, 0.45);
+}
+#instructions-dom-ui .howto-body {
+  flex: 1;
+  overflow: auto;
+  padding: 8px 16px 12px;
+  -webkit-overflow-scrolling: touch;
+}
+#instructions-dom-ui .howto-page h3 {
+  margin: 8px 0 12px;
+  font-family: Cinzel, serif;
+  font-weight: 900;
+  font-size: 1.25rem;
+  text-align: center;
+}
+#instructions-dom-ui .howto-keys {
+  background: #1a2424;
+  color: #fff;
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 14px;
+}
+#instructions-dom-ui .howto-keyrow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+#instructions-dom-ui .howto-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 10px;
+  background: #2a3232;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  font-weight: 800;
+}
+#instructions-dom-ui .howto-key.wide {
+  min-width: 96px;
+}
+#instructions-dom-ui .howto-key.fire {
+  background: rgba(145, 42, 42, 0.85);
+}
+#instructions-dom-ui .howto-key.slam {
+  background: rgba(120, 80, 20, 0.85);
+}
+#instructions-dom-ui .howto-note {
+  margin: 4px 0 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  opacity: 0.85;
+}
+#instructions-dom-ui .howto-actions,
+#instructions-dom-ui .howto-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+#instructions-dom-ui .howto-actions li,
+#instructions-dom-ui .howto-list li {
+  margin: 0 0 12px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+#instructions-dom-ui .howto-list li {
+  padding-left: 0.1rem;
+}
+#instructions-dom-ui .howto-list li::before {
+  content: "• ";
+}
+#instructions-dom-ui .tag {
+  display: inline-block;
+  min-width: 64px;
+  text-align: center;
+  padding: 4px 10px;
+  margin-right: 8px;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+#instructions-dom-ui .tag.teal {
+  background: #2a9191;
+}
+#instructions-dom-ui .tag.fire {
+  background: #912a2a;
+}
+#instructions-dom-ui .tag.slam {
+  background: #785014;
+}
+#instructions-dom-ui .howto-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px 16px;
+  flex-shrink: 0;
+  border-top: 1px solid rgba(26, 36, 36, 0.12);
+}
+#instructions-dom-ui .howto-dots {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+#instructions-dom-ui .howto-dots .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(26, 36, 36, 0.25);
+}
+#instructions-dom-ui .howto-dots .dot.on {
+  background: #2a9191;
+  box-shadow: 0 0 0 3px rgba(42, 145, 145, 0.28);
+}
+#instructions-dom-ui .howto-nav {
+  display: flex;
+  gap: 8px;
+}
+#instructions-dom-ui .howto-prev {
+  background: #fff8e7;
+  color: #1a2424;
+}
+#instructions-dom-ui .howto-next {
+  background: #2a9191;
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.35);
+}

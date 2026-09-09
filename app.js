@@ -304,43 +304,42 @@ function getMenuLayout(scene) {
     };
   }
 
-  // Mobile / letterbox: design in CSS px to match approved mobile mock, then → world.
-  // Strip CSS height is the visible game band (FIT letterbox).
+  // Mobile / letterbox: CSS-px design matching approved mobile mock, then → world.
+  // Fill almost the whole FIT strip (mock is “letterboxed but readable”, not tiny).
   const stripCss = Math.max(WORLD_H * ds, 1);
-  // Mock: TITLE dominates the band; Start ~48 CSS; Instructions secondary; small margins.
-  const usable = stripCss * 0.92;
-  let titleCss = usable * 0.36; // wordmark hierarchy — largest element
-  let ribbonCss = usable * 0.08;
-  let startCss = Math.min(52, Math.max(46, usable * 0.22));
-  let instrCss = Math.min(40, Math.max(32, usable * 0.135));
-  let gapCss = usable * 0.035;
-  // Gaps appear 3x (title→ribbon, ribbon→start, start→instr)
+  const usable = stripCss * 0.96;
+  let titleCss = usable * 0.4; // TITLE ≫ CTAs
+  let ribbonCss = usable * 0.075;
+  let startCss = Math.min(54, Math.max(48, usable * 0.245)); // mock: Start ≥ ~48 CSS
+  let instrCss = Math.min(42, Math.max(34, usable * 0.145));
+  let gapCss = usable * 0.028;
   const sum = () => titleCss + ribbonCss + startCss + instrCss + gapCss * 3;
   let guard = 0;
-  while (sum() > usable && guard < 24) {
+  while (sum() > usable && guard < 28) {
     guard += 1;
     const s = usable / sum();
-    // Protect title hierarchy — shrink CTAs/gaps more than the wordmark.
-    titleCss *= Math.pow(s, 0.35);
+    // Protect wordmark; shrink CTAs/gaps first.
+    titleCss *= Math.pow(s, 0.28);
     ribbonCss *= s;
-    startCss *= Math.pow(s, 1.15);
-    instrCss *= Math.pow(s, 1.15);
+    startCss *= Math.pow(s, 1.2);
+    instrCss *= Math.pow(s, 1.2);
     gapCss *= s;
   }
-  // Prefer Start ≥ ~44 CSS px when the strip still has room.
-  if (startCss < 44 && usable - sum() > 2) {
-    startCss += Math.min(44 - startCss, usable - sum());
+  // Lock Start near 48 CSS when strip has room (mock touch target).
+  if (startCss < 48 && usable - sum() > 1) {
+    startCss += Math.min(48 - startCss, usable - sum());
   }
 
   const toWorld = (css) => Math.round(css / ds);
-  const titleSize = Math.max(56, toWorld(titleCss));
-  const startH = Math.max(40, toWorld(startCss));
-  const startW = Math.round(Math.min(WORLD_W * 0.42, startH * 5.2));
-  const instrH = Math.max(34, toWorld(instrCss));
-  const instrW = Math.round(Math.min(WORLD_W * 0.34, instrH * 4.8));
-  const ribbonFont = Math.max(12, toWorld(ribbonCss * 0.55));
-  const ribbonPadX = Math.max(12, toWorld(ribbonCss * 0.35));
-  const ribbonPadY = Math.max(5, toWorld(ribbonCss * 0.22));
+  const titleSize = Math.max(64, toWorld(titleCss));
+  const startH = Math.max(44, toWorld(startCss));
+  // Wider pills like the mock (use more of the strip width).
+  const startW = Math.round(Math.min(WORLD_W * 0.52, Math.max(startH * 5.6, WORLD_W * 0.38)));
+  const instrH = Math.max(36, toWorld(instrCss));
+  const instrW = Math.round(Math.min(WORLD_W * 0.4, Math.max(instrH * 5.0, WORLD_W * 0.3)));
+  const ribbonFont = Math.max(13, toWorld(ribbonCss * 0.58));
+  const ribbonPadX = Math.max(14, toWorld(ribbonCss * 0.4));
+  const ribbonPadY = Math.max(6, toWorld(ribbonCss * 0.24));
   const gap = Math.max(8, toWorld(gapCss));
 
   return {
@@ -704,12 +703,11 @@ function openInstructionsOverlay(scene) {
     buildKeyChip(scene, kx + 120, ky + 110, 'E', 'slam').forEach((o) => c.add(o));
     c.add(
       scene.add
-        .text(kx + 16, ky + kh - 36, 'Custom diagram — no stock watermark.\nMobile: on-screen JUMP / FIRE / SLAM.', {
+        .text(kx + 16, ky + kh - 28, 'On mobile: JUMP / FIRE / SLAM buttons', {
           fontFamily: 'Nunito, system-ui, sans-serif',
-          fontSize: '13px',
-          fontStyle: '600',
-          color: 'rgba(255,255,255,0.75)',
-          lineSpacing: 4,
+          fontSize: '14px',
+          fontStyle: '700',
+          color: 'rgba(255,255,255,0.8)',
         })
         .setOrigin(0, 0)
     );

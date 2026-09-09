@@ -308,7 +308,7 @@ function getMenuLayout(scene) {
   // Fill almost the whole FIT strip (mock is “letterboxed but readable”, not tiny).
   const stripCss = Math.max(WORLD_H * ds, 1);
   const usable = stripCss * 0.96;
-  let titleCss = usable * 0.4; // TITLE ≫ CTAs
+  let titleCss = usable * 0.34; // TITLE ≫ CTAs (width-capped later if needed)
   let ribbonCss = usable * 0.075;
   let startCss = Math.min(54, Math.max(48, usable * 0.245)); // mock: Start ≥ ~48 CSS
   let instrCss = Math.min(42, Math.max(34, usable * 0.145));
@@ -334,9 +334,9 @@ function getMenuLayout(scene) {
   const titleSize = Math.max(64, toWorld(titleCss));
   const startH = Math.max(44, toWorld(startCss));
   // Wider pills like the mock (use more of the strip width).
-  const startW = Math.round(Math.min(WORLD_W * 0.52, Math.max(startH * 5.6, WORLD_W * 0.38)));
+  const startW = Math.round(Math.min(WORLD_W * 0.46, Math.max(startH * 5.2, WORLD_W * 0.34)));
   const instrH = Math.max(36, toWorld(instrCss));
-  const instrW = Math.round(Math.min(WORLD_W * 0.4, Math.max(instrH * 5.0, WORLD_W * 0.3)));
+  const instrW = Math.round(Math.min(WORLD_W * 0.36, Math.max(instrH * 4.6, WORLD_W * 0.26)));
   const ribbonFont = Math.max(13, toWorld(ribbonCss * 0.58));
   const ribbonPadX = Math.max(14, toWorld(ribbonCss * 0.4));
   const ribbonPadY = Math.max(6, toWorld(ribbonCss * 0.24));
@@ -972,17 +972,26 @@ const menuScene = {
       nodes.push(this.add.image(1000, 400, 'background'));
 
       const layout = getMenuLayout(this);
-      const { cx, cy, titleSize, strokeTitle, ribbonFont, ribbonPadX, ribbonPadY, startW, startH, instrW, instrH, gap } =
+      let { cx, cy, titleSize, strokeTitle, ribbonFont, ribbonPadX, ribbonPadY, startW, startH, instrW, instrH, gap } =
         layout;
 
-      // Measure stack, then center vertically inside the letterbox strip.
+      // Fit wordmark to strip WIDTH (Richard: M/R were clipped after #27 height scale).
+      const maxTitleW = 1890 * 0.9;
       const titleProbe = this.add
         .text(0, 0, 'MAGE HOPPER', {
           fontFamily: 'Cinzel, serif',
           fontSize: `${titleSize}px`,
           fontStyle: '900',
+          stroke: '#1a2424',
+          strokeThickness: strokeTitle,
         })
         .setVisible(false);
+      if (titleProbe.width > maxTitleW) {
+        titleSize = Math.max(48, Math.floor(titleSize * (maxTitleW / titleProbe.width)));
+        strokeTitle = Math.max(4, Math.round(titleSize * 0.08));
+        titleProbe.setFontSize(titleSize);
+        titleProbe.setStroke('#1a2424', strokeTitle);
+      }
       const ribbonProbe = this.add
         .text(0, 0, 'A PLATFORM ADVENTURE', {
           fontFamily: 'Nunito, system-ui, sans-serif',

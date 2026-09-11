@@ -517,3 +517,100 @@ body {
 #levelup-dom-ui .levelup-continue:active {
   background: linear-gradient(180deg, #1f6e6e 0%, #185858 100%);
 }
+
+/* Full-viewport Game Over card on mobile — not trapped in letterboxed canvas */
+#gameover-dom-ui {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  align-items: center;
+  justify-content: center;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+    max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  box-sizing: border-box;
+  background: rgba(20, 8, 8, 0.75);
+  -webkit-tap-highlight-color: transparent;
+  pointer-events: auto !important;
+  touch-action: manipulation;
+}
+#gameover-dom-ui.show {
+  display: flex;
+}
+#gameover-dom-ui .gameover-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(420px, 100%);
+  margin: 0 auto;
+  padding: 32px 24px;
+  background: linear-gradient(180deg, #fff8e7 0%, #f3e6c8 100%);
+  border-radius: 20px;
+  border: 2px solid rgba(26, 36, 36, 0.35);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  color: #1a2424;
+  font-family: Nunito, system-ui, sans-serif;
+  text-align: center;
+  pointer-events: auto !important;
+  position: relative;
+  z-index: 1;
+}
+#gameover-dom-ui .gameover-panel h2 {
+  margin: 0 0 14px;
+  font-family: Cinzel, serif;
+  font-weight: 900;
+  font-size: 1.9rem;
+  color: #1a2424;
+  text-shadow: 0 2px 0 #912a2a;
+}
+#gameover-dom-ui .gameover-ribbon {
+  padding: 6px 18px;
+  margin-bottom: 14px;
+  border-radius: 999px;
+  background: rgba(255, 248, 231, 0.55);
+  color: rgba(26, 36, 36, 0.72);
+  font-weight: 800;
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
+}
+#gameover-dom-ui .gameover-sub {
+  margin: 0 0 22px;
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: rgba(26, 36, 36, 0.8);
+}
+#gameover-dom-ui .gameover-actions {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+#gameover-dom-ui .gameover-actions button {
+  flex: 1;
+  min-height: 56px;
+  padding: 12px 16px;
+  border-radius: 999px;
+  font-family: Nunito, system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 1rem;
+  cursor: pointer;
+  touch-action: manipulation;
+  pointer-events: auto !important;
+  -webkit-user-select: none;
+  user-select: none;
+}
+#gameover-dom-ui .gameover-play-again {
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  background: linear-gradient(180deg, #3aabb0 0%, #1f6e6e 100%);
+  color: #fff;
+}
+#gameover-dom-ui .gameover-play-again:active {
+  background: linear-gradient(180deg, #1f6e6e 0%, #185858 100%);
+}
+#gameover-dom-ui .gameover-quit {
+  border: 2px solid rgba(26, 36, 36, 0.35);
+  background: #fff8e7;
+  color: #1a2424;
+}
+#gameover-dom-ui .gameover-quit:active {
+  background: #f0e6d0;
+}

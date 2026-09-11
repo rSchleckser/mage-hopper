@@ -614,3 +614,112 @@ body {
 #gameover-dom-ui .gameover-quit:active {
   background: #f0e6d0;
 }
+
+/* Full-viewport Game Win card on mobile — not trapped in letterboxed canvas */
+#gamewin-dom-ui {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  align-items: center;
+  justify-content: center;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+    max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  box-sizing: border-box;
+  background: rgba(10, 16, 16, 0.72);
+  -webkit-tap-highlight-color: transparent;
+  pointer-events: auto !important;
+  touch-action: manipulation;
+}
+#gamewin-dom-ui.show {
+  display: flex;
+}
+#gamewin-dom-ui .gamewin-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(420px, 100%);
+  margin: 0 auto;
+  padding: 32px 24px;
+  background: linear-gradient(180deg, #fff8e7 0%, #f3e6c8 100%);
+  border-radius: 20px;
+  border: 2px solid rgba(26, 36, 36, 0.35);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  color: #1a2424;
+  font-family: Nunito, system-ui, sans-serif;
+  text-align: center;
+  pointer-events: auto !important;
+  position: relative;
+  z-index: 1;
+}
+#gamewin-dom-ui .gamewin-panel h2 {
+  margin: 0 0 14px;
+  font-family: Cinzel, serif;
+  font-weight: 900;
+  font-size: 1.9rem;
+  color: #1a2424;
+  text-shadow: 0 2px 0 #1f6e6e;
+}
+#gamewin-dom-ui .gamewin-ribbon {
+  padding: 6px 18px;
+  margin-bottom: 14px;
+  border-radius: 999px;
+  background: rgba(255, 248, 231, 0.55);
+  color: rgba(26, 36, 36, 0.72);
+  font-weight: 800;
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
+}
+#gamewin-dom-ui .gamewin-sub {
+  margin: 0 0 18px;
+  font-weight: 800;
+  font-size: 1.2rem;
+  color: #1f6e6e;
+}
+#gamewin-dom-ui .gamewin-dots {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 26px;
+}
+#gamewin-dom-ui .gamewin-dots .dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #2a9191;
+  box-shadow: 0 0 0 4px rgba(42, 145, 145, 0.28);
+}
+#gamewin-dom-ui .gamewin-actions {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+#gamewin-dom-ui .gamewin-actions button {
+  flex: 1;
+  min-height: 56px;
+  padding: 12px 16px;
+  border-radius: 999px;
+  font-family: Nunito, system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 1rem;
+  cursor: pointer;
+  touch-action: manipulation;
+  pointer-events: auto !important;
+  -webkit-user-select: none;
+  user-select: none;
+}
+#gamewin-dom-ui .gamewin-play-again {
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  background: linear-gradient(180deg, #3aabb0 0%, #1f6e6e 100%);
+  color: #fff;
+}
+#gamewin-dom-ui .gamewin-play-again:active {
+  background: linear-gradient(180deg, #1f6e6e 0%, #185858 100%);
+}
+#gamewin-dom-ui .gamewin-quit {
+  border: 2px solid rgba(26, 36, 36, 0.35);
+  background: #fff8e7;
+  color: #1a2424;
+}
+#gamewin-dom-ui .gamewin-quit:active {
+  background: #f0e6d0;
+}

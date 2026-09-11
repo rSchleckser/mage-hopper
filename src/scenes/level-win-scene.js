@@ -2,6 +2,8 @@ import { gameState } from '../game-state.js';
 import { setMobileControlsVisible } from '../input.js';
 import { makePillButton } from '../ui/menu-widgets.js';
 import { MENU_COLORS } from '../ui/theme.js';
+import { shouldUseDomOverlay } from '../ui/dom-overlays.js';
+import { openLevelCompleteDomOverlay, hideLevelCompleteDomUi } from '../ui/level-complete-overlay.js';
 
 const TOTAL_LEVELS = 5;
 
@@ -12,12 +14,32 @@ export const levelWinScene = {
   },
   create: function () {
     setMobileControlsVisible(false);
+    hideLevelCompleteDomUi();
 
     const cx = 1000;
     const cy = 445;
     const clearedLevel = gameState.level - 1;
+    const nextLevel = gameState.level;
 
     this.add.image(cx, 400, 'Background');
+
+    const goToNextLevel = () => {
+      gameState.lives = 3;
+      this.scene.start('Game');
+    };
+
+    this.events.once('shutdown', () => hideLevelCompleteDomUi());
+
+    // Portrait / touch: the letterboxed canvas is tiny here, use a full-viewport card instead.
+    if (shouldUseDomOverlay()) {
+      openLevelCompleteDomOverlay(this, {
+        clearedLevel,
+        nextLevel,
+        totalLevels: TOTAL_LEVELS,
+        onContinue: goToNextLevel,
+      });
+      return;
+    }
 
     // Dim the backdrop so the card pops, same language as the Instructions overlay
     this.add.rectangle(cx, 400, 1890, 890, 0x0a1010, 0.35);
@@ -69,7 +91,7 @@ export const levelWinScene = {
     ribbonText.setPosition(cx, ribbonY);
 
     this.add
-      .text(cx, ribbonY + 56, `Ready for Level ${gameState.level}?`, {
+      .text(cx, ribbonY + 56, `Ready for Level ${nextLevel}?`, {
         fontFamily: 'Nunito, system-ui, sans-serif',
         fontSize: '28px',
         fontStyle: '800',
@@ -102,9 +124,6 @@ export const levelWinScene = {
       fontSize: 22,
       depth: 20,
     });
-    continueBtn.setOnActivate(() => {
-      gameState.lives = 3;
-      this.scene.start('Game');
-    });
+    continueBtn.setOnActivate(goToNextLevel);
   },
 };

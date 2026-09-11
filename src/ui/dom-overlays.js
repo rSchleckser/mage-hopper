@@ -1,3 +1,14 @@
+import { isTouchDevice } from '../input.js';
+
+export function shouldUseDomOverlay() {
+  // Portrait / narrow / touch: the letterboxed Phaser canvas shrinks to a thin
+  // strip, so full-screen modals (Instructions, Level Complete) render as DOM
+  // overlays instead of tiny canvas cards.
+  const narrow = Math.min(window.innerWidth, window.innerHeight) < 900;
+  const portrait = window.matchMedia('(orientation: portrait)').matches;
+  return isTouchDevice() || (narrow && portrait) || window.innerWidth < 700;
+}
+
 // --- Menu DOM hit overlays (Android Chrome: Phaser canvas taps are unreliable) ---
 function worldToCanvasCss(scene, wx, wy, ww, wh) {
   const canvas = scene.game.canvas;

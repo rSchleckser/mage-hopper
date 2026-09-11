@@ -1,4 +1,5 @@
 import { isTouchDevice } from '../input.js';
+import { playUiClick } from '../audio.js';
 import { MENU_COLORS } from './theme.js';
 
 export function getMenuLayout(scene) {
@@ -173,6 +174,7 @@ export function makePillButton(scene, x, y, label, style) {
   paint();
 
   const activate = () => {
+    playUiClick();
     if (typeof container._onActivate === 'function') container._onActivate();
   };
   const press = () => {

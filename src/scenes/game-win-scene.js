@@ -4,6 +4,7 @@ import { makePillButton } from '../ui/menu-widgets.js';
 import { MENU_COLORS } from '../ui/theme.js';
 import { shouldUseDomOverlay } from '../ui/dom-overlays.js';
 import { openGameWinDomOverlay, hideGameWinDomUi } from '../ui/game-win-overlay.js';
+import { playVictory } from '../audio.js';
 
 const TOTAL_LEVELS = 5;
 
@@ -15,6 +16,7 @@ export const gameWinScene = {
   create: function () {
     setMobileControlsVisible(false);
     hideGameWinDomUi();
+    playVictory();
 
     const cx = 1000;
     const cy = 445;

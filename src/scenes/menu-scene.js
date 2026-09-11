@@ -4,6 +4,7 @@ import { getMenuLayout, makePillButton } from '../ui/menu-widgets.js';
 import { hideMenuDomUi, syncMenuDomUi } from '../ui/dom-overlays.js';
 import { openInstructionsOverlay } from '../ui/instructions-overlay.js';
 import { MENU_COLORS } from '../ui/theme.js';
+import { isMuted, toggleMuted } from '../audio.js';
 
 export const menuScene = {
   key: 'Menu',
@@ -156,6 +157,21 @@ export const menuScene = {
           this._instrCloseBound = false;
         });
       }
+
+      // Fixed corner position, outside the scaled group — its own zone stays
+      // correctly aligned since it isn't subject to the group's uniform scale.
+      const soundBtn = makePillButton(this, 1800, 40, isMuted() ? 'Sound: Off' : 'Sound: On', {
+        width: 130,
+        height: 40,
+        variant: 'secondary',
+        fontSize: 15,
+        depth: 20,
+      });
+      soundBtn.setOnActivate(() => {
+        const nowMuted = toggleMuted();
+        soundBtn.setLabel(nowMuted ? 'Sound: Off' : 'Sound: On');
+      });
+      nodes.push(soundBtn);
 
       // DOM hits from scaled world positions (fat min target kept inside syncMenuDomUi).
       const pad = 12;

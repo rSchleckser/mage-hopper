@@ -2,6 +2,7 @@ import { gameState } from '../../game-state.js';
 import { setMobileControlsVisible } from '../../input.js';
 import { applyFacingHitbox } from '../../utils/hitbox.js';
 import { INVULNERABILITY_MS } from '../../constants.js';
+import { playEnemyDefeat, playHurt, playKeyCollect } from '../../audio.js';
 
 export function defeatEnemy(enemyHit) {
   enemyHit.setData('defeated', true);
@@ -9,6 +10,7 @@ export function defeatEnemy(enemyHit) {
   enemyHit.disableBody(true, true);
   enemyHit.setActive(false);
   enemyHit.setVisible(false);
+  playEnemyDefeat();
 }
 
 // Fireballs fly straight; no platform bounce/stop — cleaned up when off-screen
@@ -86,6 +88,7 @@ export function playerDies(player, enemyHit) {
     return;
   }
   this.invulnerableUntil = this.time.now + INVULNERABILITY_MS;
+  playHurt();
 
   player.setVelocity(0, 0);
   if (player.body) {
@@ -125,6 +128,7 @@ export function playerDies(player, enemyHit) {
 export function collectKey(player, keySprite) {
   gameState.collectedKey = true;
   keySprite.destroy();
+  playKeyCollect();
 }
 
 // Registered as a Phaser overlap callback with the scene as context.

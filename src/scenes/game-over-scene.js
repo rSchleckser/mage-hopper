@@ -4,6 +4,7 @@ import { makePillButton } from '../ui/menu-widgets.js';
 import { MENU_COLORS } from '../ui/theme.js';
 import { shouldUseDomOverlay } from '../ui/dom-overlays.js';
 import { openGameOverDomOverlay, hideGameOverDomUi } from '../ui/game-over-overlay.js';
+import { playGameOver } from '../audio.js';
 
 export const gameOverScene = {
   key: 'GameOver',
@@ -13,6 +14,7 @@ export const gameOverScene = {
   create: function () {
     setMobileControlsVisible(false);
     hideGameOverDomUi();
+    playGameOver();
 
     const cx = 1000;
     const cy = 445;

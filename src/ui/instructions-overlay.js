@@ -1,14 +1,6 @@
-import { isTouchDevice } from '../input.js';
 import { MENU_COLORS } from './theme.js';
 import { makePillButton, buildKeyChip, buildActionRow } from './menu-widgets.js';
-import { hideMenuDomUi, bindDomTap, setGameSurfaceInteractive } from './dom-overlays.js';
-
-export function shouldUseDomInstructions() {
-  // Portrait / narrow / touch: Phaser modal is tiny inside the letterbox strip.
-  const narrow = Math.min(window.innerWidth, window.innerHeight) < 900;
-  const portrait = window.matchMedia('(orientation: portrait)').matches;
-  return isTouchDevice() || (narrow && portrait) || window.innerWidth < 700;
-}
+import { hideMenuDomUi, bindDomTap, setGameSurfaceInteractive, shouldUseDomOverlay } from './dom-overlays.js';
 
 export function hideInstructionsDomUi() {
   const root = document.getElementById('instructions-dom-ui');
@@ -156,7 +148,7 @@ export function openInstructionsOverlay(scene) {
   }
 
   // Mobile / portrait: full-viewport DOM overlay (not tiny letterboxed Phaser modal).
-  if (shouldUseDomInstructions()) {
+  if (shouldUseDomOverlay()) {
     return openInstructionsDomOverlay(scene);
   }
 

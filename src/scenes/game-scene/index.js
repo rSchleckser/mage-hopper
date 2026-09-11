@@ -1,6 +1,7 @@
 import { setMobileControlsVisible } from '../../input.js';
-import { hideMenuDomUi } from '../../ui/dom-overlays.js';
+import { hideMenuDomUi, bindDomTap } from '../../ui/dom-overlays.js';
 import { hideInstructionsDomUi } from '../../ui/instructions-overlay.js';
+import { makePillButton } from '../../ui/menu-widgets.js';
 import { gameState } from '../../game-state.js';
 import { applyFacingHitbox } from '../../utils/hitbox.js';
 import { PLAYER_MOVE_SPEED, ENEMY_BASE_SPEED } from '../../constants.js';
@@ -158,6 +159,29 @@ export const gameScene = {
     this.dKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D);
     this.fKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F);
     this.eKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E);
+
+    // Pause: keyboard, HUD button (desktop), and the persistent mobile pause button
+    const openPauseMenu = () => {
+      if (this.playerState === 'dying' || this.isExitingLevel) return;
+      this.input.enabled = false;
+      this.scene.pause();
+      this.scene.launch('Pause');
+    };
+    this.input.keyboard.on('keydown-ESC', openPauseMenu);
+    this.input.keyboard.on('keydown-P', openPauseMenu);
+
+    const pauseHudBtn = makePillButton(this, 1400, 34, 'Pause', {
+      width: 110,
+      height: 40,
+      variant: 'secondary',
+      fontSize: 16,
+      depth: 25,
+    });
+    pauseHudBtn.setOnActivate(openPauseMenu);
+
+    bindDomTap(document.getElementById('btn-pause'), openPauseMenu);
+
+    this.events.on('resume', () => setMobileControlsVisible(true));
   },
 
   update: function () {

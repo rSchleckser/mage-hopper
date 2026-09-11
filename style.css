@@ -50,6 +50,31 @@ body {
   display: flex;
 }
 
+#btn-pause {
+  position: fixed;
+  top: max(12px, env(safe-area-inset-top));
+  right: max(12px, env(safe-area-inset-right));
+  z-index: 9001;
+  width: 48px;
+  height: 44px;
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  border-radius: 12px;
+  background: rgba(20, 40, 40, 0.55);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  font-family: system-ui, -apple-system, Roboto, sans-serif;
+  letter-spacing: 2px;
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+}
+
+#btn-pause:active {
+  background: rgba(42, 145, 145, 0.75);
+  transform: scale(0.96);
+}
+
 #mobile-controls .pad,
 #mobile-controls .actions {
   display: flex;
@@ -721,5 +746,98 @@ body {
   color: #1a2424;
 }
 #gamewin-dom-ui .gamewin-quit:active {
+  background: #f0e6d0;
+}
+
+/* Full-viewport Pause card on mobile — not trapped in letterboxed canvas */
+#pause-dom-ui {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  align-items: center;
+  justify-content: center;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+    max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  box-sizing: border-box;
+  background: rgba(10, 16, 16, 0.72);
+  -webkit-tap-highlight-color: transparent;
+  pointer-events: auto !important;
+  touch-action: manipulation;
+}
+#pause-dom-ui.show {
+  display: flex;
+}
+#pause-dom-ui .pause-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(360px, 100%);
+  margin: 0 auto;
+  padding: 32px 24px;
+  background: linear-gradient(180deg, #fff8e7 0%, #f3e6c8 100%);
+  border-radius: 20px;
+  border: 2px solid rgba(26, 36, 36, 0.35);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  color: #1a2424;
+  font-family: Nunito, system-ui, sans-serif;
+  text-align: center;
+  pointer-events: auto !important;
+  position: relative;
+  z-index: 1;
+}
+#pause-dom-ui .pause-panel h2 {
+  margin: 0 0 14px;
+  font-family: Cinzel, serif;
+  font-weight: 900;
+  font-size: 1.9rem;
+  color: #1a2424;
+  text-shadow: 0 2px 0 #1f6e6e;
+}
+#pause-dom-ui .pause-ribbon {
+  padding: 6px 18px;
+  margin-bottom: 22px;
+  border-radius: 999px;
+  background: rgba(255, 248, 231, 0.55);
+  color: rgba(26, 36, 36, 0.72);
+  font-weight: 800;
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
+}
+#pause-dom-ui .pause-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+#pause-dom-ui .pause-actions button {
+  min-height: 56px;
+  padding: 12px 16px;
+  border-radius: 999px;
+  font-family: Nunito, system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 1.05rem;
+  cursor: pointer;
+  touch-action: manipulation;
+  pointer-events: auto !important;
+  -webkit-user-select: none;
+  user-select: none;
+}
+#pause-dom-ui .pause-resume {
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  background: linear-gradient(180deg, #3aabb0 0%, #1f6e6e 100%);
+  color: #fff;
+}
+#pause-dom-ui .pause-resume:active {
+  background: linear-gradient(180deg, #1f6e6e 0%, #185858 100%);
+}
+#pause-dom-ui .pause-restart,
+#pause-dom-ui .pause-quit {
+  border: 2px solid rgba(26, 36, 36, 0.35);
+  background: #fff8e7;
+  color: #1a2424;
+}
+#pause-dom-ui .pause-restart:active,
+#pause-dom-ui .pause-quit:active {
   background: #f0e6d0;
 }

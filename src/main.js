@@ -1,5 +1,6 @@
 import { menuScene } from './scenes/menu-scene.js';
 import { gameScene } from './scenes/game-scene/index.js';
+import { pauseScene } from './scenes/pause-scene.js';
 import { gameOverScene } from './scenes/game-over-scene.js';
 import { levelWinScene } from './scenes/level-win-scene.js';
 import { gameWinScene } from './scenes/game-win-scene.js';
@@ -29,7 +30,7 @@ const config = {
       debug: false, // Set to true to see physics bodies
     },
   },
-  scene: [menuScene, gameScene, gameOverScene, levelWinScene, gameWinScene],
+  scene: [menuScene, gameScene, pauseScene, gameOverScene, levelWinScene, gameWinScene],
 };
 
 const game = new Phaser.Game(config);

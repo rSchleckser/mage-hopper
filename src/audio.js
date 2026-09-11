@@ -1,14 +1,30 @@
-// Lightweight synthesized sound effects (Web Audio oscillators) — no asset
-// files to load, fits the retro pixel-art tone, and sidesteps browser
-// autoplay restrictions since every call happens downstream of a real
-// user gesture (a key press or a tap).
+// Retro sound effects, rendered from https://sfxr.me (public domain / Unlicense)
+// presets ahead of time into the WAV files in ./sounds. Loaded once via Web
+// Audio and played back as buffers — no Phaser sound manager coupling, so
+// this can be called from plain modules (combat.js, player-controller.js)
+// without needing a scene reference.
 const STORAGE_KEY = 'mageHopper.muted';
+
+const SOUND_FILES = {
+  jump: './sounds/jump.wav',
+  fire: './sounds/fire.wav',
+  hurt: './sounds/hurt.wav',
+  slam: './sounds/slam.wav',
+  enemyDefeat: './sounds/enemy-defeat.wav',
+  keyCollect: './sounds/key-collect.wav',
+  uiClick: './sounds/ui-click.wav',
+  chime: './sounds/chime.wav',
+  sadTone: './sounds/sad-tone.wav',
+};
 
 let ctx = null;
 let muted = false;
 try {
   muted = localStorage.getItem(STORAGE_KEY) === 'true';
 } catch (e) {}
+
+const bufferCache = new Map();
+const loadingPromises = new Map();
 
 function getContext() {
   if (!ctx) {
@@ -19,6 +35,58 @@ function getContext() {
     ctx.resume();
   }
   return ctx;
+}
+
+function loadBuffer(name) {
+  if (bufferCache.has(name)) return Promise.resolve(bufferCache.get(name));
+  if (loadingPromises.has(name)) return loadingPromises.get(name);
+  const audioCtx = getContext();
+  const promise = fetch(SOUND_FILES[name])
+    .then((res) => res.arrayBuffer())
+    .then((data) => audioCtx.decodeAudioData(data))
+    .then((buffer) => {
+      bufferCache.set(name, buffer);
+      return buffer;
+    });
+  loadingPromises.set(name, promise);
+  return promise;
+}
+
+// Kick off loading every sound the first time any sound is requested, so
+// later calls (which need to feel instant) aren't waiting on a fetch.
+let preloadStarted = false;
+function ensurePreloaded() {
+  if (preloadStarted) return;
+  preloadStarted = true;
+  Object.keys(SOUND_FILES).forEach(loadBuffer);
+}
+
+function playSample(name, { rate = 1, gain = 0.5, delay = 0 } = {}) {
+  if (muted) return;
+  ensurePreloaded();
+  loadBuffer(name).then((buffer) => {
+    if (muted) return; // guard against a mute toggle while the fetch/decode was in flight
+    const audioCtx = getContext();
+    const source = audioCtx.createBufferSource();
+    source.buffer = buffer;
+    source.playbackRate.value = rate;
+    const gainNode = audioCtx.createGain();
+    gainNode.gain.value = gain;
+    source.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    source.start(audioCtx.currentTime + delay);
+  });
+}
+
+// A short run of pitch-shifted copies of one sample, played back-to-back
+// (for jingles/chimes) — reuses one designed "note" voice at different
+// playback rates instead of needing a separate file per pitch.
+function chimeSequence(voice, rates, noteGap, gain) {
+  let t = 0;
+  rates.forEach((rate) => {
+    playSample(voice, { rate, gain, delay: t });
+    t += noteGap;
+  });
 }
 
 export function isMuted() {
@@ -37,97 +105,48 @@ export function toggleMuted() {
   return muted;
 }
 
-// One short tone with a quick attack/decay envelope, optionally sweeping
-// from `freq` to `freqEnd` over `duration` seconds.
-function tone({ freq, freqEnd = freq, duration = 0.15, type = 'sine', gain = 0.2, delay = 0 }) {
-  if (muted) return;
-  const audioCtx = getContext();
-  const osc = audioCtx.createOscillator();
-  const gainNode = audioCtx.createGain();
-  osc.type = type;
-  const startTime = audioCtx.currentTime + delay;
-  osc.frequency.setValueAtTime(freq, startTime);
-  if (freqEnd !== freq) {
-    osc.frequency.exponentialRampToValueAtTime(Math.max(freqEnd, 1), startTime + duration);
-  }
-  gainNode.gain.setValueAtTime(gain, startTime);
-  gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
-  osc.connect(gainNode);
-  gainNode.connect(audioCtx.destination);
-  osc.start(startTime);
-  osc.stop(startTime + duration + 0.02);
-}
-
-// A short run of tones played back-to-back (for jingles/chimes).
-function sequence(notes) {
-  let t = 0;
-  notes.forEach((note) => {
-    tone({ ...note, delay: t });
-    t += note.gap ?? note.duration ?? 0.15;
-  });
-}
-
 export function playJump() {
-  tone({ freq: 320, freqEnd: 640, duration: 0.12, type: 'triangle', gain: 0.18 });
+  playSample('jump', { gain: 0.55 });
 }
 
 export function playFire() {
-  tone({ freq: 900, freqEnd: 220, duration: 0.1, type: 'sawtooth', gain: 0.12 });
+  playSample('fire', { gain: 0.45 });
 }
 
 export function playSlam() {
-  tone({ freq: 140, freqEnd: 55, duration: 0.28, type: 'square', gain: 0.22 });
+  playSample('slam', { gain: 0.55 });
 }
 
 export function playHurt() {
-  tone({ freq: 300, freqEnd: 90, duration: 0.22, type: 'square', gain: 0.2 });
+  playSample('hurt', { gain: 0.6 });
 }
 
 export function playEnemyDefeat() {
-  tone({ freq: 520, freqEnd: 180, duration: 0.14, type: 'sawtooth', gain: 0.16 });
+  playSample('enemyDefeat', { gain: 0.5 });
 }
 
 export function playKeyCollect() {
-  sequence([
-    { freq: 523, duration: 0.08, type: 'sine', gain: 0.18, gap: 0.08 },
-    { freq: 784, duration: 0.14, type: 'sine', gain: 0.18 },
-  ]);
-}
-
-export function playLevelComplete() {
-  sequence([
-    { freq: 523, duration: 0.1, type: 'sine', gain: 0.2, gap: 0.1 },
-    { freq: 659, duration: 0.1, type: 'sine', gain: 0.2, gap: 0.1 },
-    { freq: 784, duration: 0.1, type: 'sine', gain: 0.2, gap: 0.1 },
-    { freq: 1046, duration: 0.22, type: 'sine', gain: 0.22 },
-  ]);
-}
-
-export function playGameOver() {
-  sequence([
-    { freq: 392, duration: 0.2, type: 'triangle', gain: 0.2, gap: 0.2 },
-    { freq: 349, duration: 0.2, type: 'triangle', gain: 0.2, gap: 0.2 },
-    { freq: 294, duration: 0.4, type: 'triangle', gain: 0.22 },
-  ]);
-}
-
-export function playVictory() {
-  sequence([
-    { freq: 523, duration: 0.1, type: 'sine', gain: 0.2, gap: 0.1 },
-    { freq: 659, duration: 0.1, type: 'sine', gain: 0.2, gap: 0.1 },
-    { freq: 784, duration: 0.1, type: 'sine', gain: 0.2, gap: 0.1 },
-    { freq: 1046, duration: 0.1, type: 'sine', gain: 0.22, gap: 0.1 },
-    { freq: 1318, duration: 0.3, type: 'sine', gain: 0.24 },
-  ]);
+  playSample('keyCollect', { gain: 0.5 });
 }
 
 export function playUiClick() {
-  tone({ freq: 440, duration: 0.05, type: 'triangle', gain: 0.1 });
+  playSample('uiClick', { gain: 0.35 });
 }
 
 export function playPauseOpen() {
-  sequence([
-    { freq: 440, duration: 0.06, type: 'triangle', gain: 0.12, gap: 0.06 },
-    { freq: 330, duration: 0.1, type: 'triangle', gain: 0.12 },
-  ]);
+  playSample('uiClick', { rate: 0.75, gain: 0.4 });
+}
+
+// Musical intervals (relative to the base pitch) reused from the original
+// synthesized jingles — same melodic shape, now with a designed sample voice.
+export function playLevelComplete() {
+  chimeSequence('chime', [1, 1.26, 1.5, 2.0], 0.13, 0.5);
+}
+
+export function playVictory() {
+  chimeSequence('chime', [1, 1.26, 1.5, 2.0, 2.52], 0.12, 0.5);
+}
+
+export function playGameOver() {
+  chimeSequence('sadTone', [1, 0.89, 0.75], 0.24, 0.5);
 }

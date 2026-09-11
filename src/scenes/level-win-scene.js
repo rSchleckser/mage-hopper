@@ -1,6 +1,9 @@
 import { gameState } from '../game-state.js';
 import { setMobileControlsVisible } from '../input.js';
-import { enlargeTextHitArea } from '../ui/menu-widgets.js';
+import { makePillButton } from '../ui/menu-widgets.js';
+import { MENU_COLORS } from '../ui/theme.js';
+
+const TOTAL_LEVELS = 5;
 
 export const levelWinScene = {
   key: 'NextLevel',
@@ -9,40 +12,99 @@ export const levelWinScene = {
   },
   create: function () {
     setMobileControlsVisible(false);
-    this.add.image(1000, 400, 'Background');
-    this.add.text(730, 250, `Congratulations!!`, {
-      fontFamily: 'Augustine',
-      fontSize: '64px',
-      fill: '#000',
-    });
+
+    const cx = 1000;
+    const cy = 445;
+    const clearedLevel = gameState.level - 1;
+
+    this.add.image(cx, 400, 'Background');
+
+    // Dim the backdrop so the card pops, same language as the Instructions overlay
+    this.add.rectangle(cx, 400, 1890, 890, 0x0a1010, 0.35);
+
+    const panelW = 640;
+    const panelH = 400;
+    const panelY = cy;
+
+    const panelBg = this.add.graphics();
+    panelBg.fillGradientStyle(0xfff8e7, 0xfff8e7, 0xf3e6c8, 0xf3e6c8, 1);
+    panelBg.fillRoundedRect(cx - panelW / 2, panelY - panelH / 2, panelW, panelH, 20);
+    panelBg.lineStyle(3, MENU_COLORS.ink, 0.45);
+    panelBg.strokeRoundedRect(cx - panelW / 2, panelY - panelH / 2, panelW, panelH, 20);
+
+    const titleY = panelY - panelH / 2 + 70;
+    this.add
+      .text(cx, titleY, 'LEVEL COMPLETE!', {
+        fontFamily: 'Cinzel, serif',
+        fontSize: '52px',
+        fontStyle: '900',
+        color: '#fff8e7',
+        stroke: '#1a2424',
+        strokeThickness: 6,
+        shadow: {
+          offsetX: 0,
+          offsetY: 4,
+          color: '#1f6e6e',
+          blur: 0,
+          fill: true,
+          stroke: true,
+        },
+      })
+      .setOrigin(0.5);
+
+    const ribbonText = this.add
+      .text(0, 0, `STAGE ${clearedLevel} CLEARED`, {
+        fontFamily: 'Nunito, system-ui, sans-serif',
+        fontSize: '18px',
+        fontStyle: '800',
+        color: 'rgba(26,36,36,0.72)',
+      })
+      .setOrigin(0.5);
+    const ribbonY = titleY + 56;
+    const rw = ribbonText.width + 48;
+    const rh = ribbonText.height + 16;
+    const ribbonG = this.add.graphics();
+    ribbonG.fillStyle(MENU_COLORS.cream, 0.55);
+    ribbonG.fillRoundedRect(cx - rw / 2, ribbonY - rh / 2, rw, rh, 3);
+    ribbonText.setPosition(cx, ribbonY);
 
     this.add
-      .text(750, 380, `Ready to move on to`, {
-        fontFamily: 'Roboto',
-        fontSize: '48px',
-        fill: '#000',
+      .text(cx, ribbonY + 56, `Ready for Level ${gameState.level}?`, {
+        fontFamily: 'Nunito, system-ui, sans-serif',
+        fontSize: '28px',
+        fontStyle: '800',
+        color: '#1f6e6e',
       })
-      .setInteractive();
+      .setOrigin(0.5);
 
-    const nextLevel = this.add.text(870, 500, `Level: ${gameState.level}`, {
-      fontFamily: 'Roboto',
-      fontSize: '48px',
-      fill: '#000',
+    // Progress dots: one per level, filled teal up through the stage just cleared
+    const dotsY = ribbonY + 110;
+    const dotSpacing = 30;
+    const dotsStartX = cx - ((TOTAL_LEVELS - 1) * dotSpacing) / 2;
+    for (let i = 0; i < TOTAL_LEVELS; i++) {
+      const dotX = dotsStartX + i * dotSpacing;
+      const d = this.add.graphics();
+      if (i < clearedLevel) {
+        d.fillStyle(MENU_COLORS.teal, 1);
+        d.fillCircle(dotX, dotsY, 7);
+        d.lineStyle(3, MENU_COLORS.teal, 0.35);
+        d.strokeCircle(dotX, dotsY, 10);
+      } else {
+        d.fillStyle(MENU_COLORS.ink, 0.2);
+        d.fillCircle(dotX, dotsY, 6);
+      }
+    }
+
+    const continueBtn = makePillButton(this, cx, panelY + panelH / 2 - 56, 'Continue', {
+      width: 260,
+      height: 56,
+      variant: 'primary',
+      fontSize: 22,
+      depth: 20,
     });
-    enlargeTextHitArea(nextLevel, 28, 20);
-
-    nextLevel.on('pointerdown', () => {
-      this.scene.start('Game'); // Transition to game scene
+    continueBtn.setOnActivate(() => {
       gameState.lives = 3;
-    });
-
-    nextLevel.setInteractive().on('pointerover', () => {
-      nextLevel.setShadow(2, 2, 'rgba(42, 145, 113,0.5)', 2);
-      nextLevel.setColor('rgba(42, 145, 145,0.9)');
-    });
-    nextLevel.setInteractive().on('pointerout', () => {
-      nextLevel.setShadow(0, 0, 'rgba(0,0,0,0.5)', 1);
-      nextLevel.setColor('rgb(0,0,0)');
+      this.scene.start('Game');
     });
   },
 };

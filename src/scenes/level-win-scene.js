@@ -4,6 +4,7 @@ import { makePillButton } from '../ui/menu-widgets.js';
 import { MENU_COLORS } from '../ui/theme.js';
 import { shouldUseDomOverlay } from '../ui/dom-overlays.js';
 import { openLevelCompleteDomOverlay, hideLevelCompleteDomUi } from '../ui/level-complete-overlay.js';
+import { playLevelComplete } from '../audio.js';
 
 const TOTAL_LEVELS = 5;
 
@@ -15,6 +16,7 @@ export const levelWinScene = {
   create: function () {
     setMobileControlsVisible(false);
     hideLevelCompleteDomUi();
+    playLevelComplete();
 
     const cx = 1000;
     const cy = 445;

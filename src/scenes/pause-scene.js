@@ -4,12 +4,14 @@ import { makePillButton } from '../ui/menu-widgets.js';
 import { MENU_COLORS } from '../ui/theme.js';
 import { shouldUseDomOverlay } from '../ui/dom-overlays.js';
 import { openPauseDomOverlay, hidePauseDomUi } from '../ui/pause-overlay.js';
+import { playPauseOpen } from '../audio.js';
 
 export const pauseScene = {
   key: 'Pause',
   create: function () {
     hidePauseDomUi();
     setMobileControlsVisible(false);
+    playPauseOpen();
 
     const cx = 1000;
     const cy = 445;

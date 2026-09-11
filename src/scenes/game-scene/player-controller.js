@@ -1,6 +1,7 @@
 import { applyFacingHitbox } from '../../utils/hitbox.js';
 import { PLAYER_MOVE_SPEED, PLAYER_JUMP_VELOCITY } from '../../constants.js';
 import { touchInput } from '../../input.js';
+import { playJump, playFire, playSlam } from '../../audio.js';
 
 function readInput(scene) {
   return {
@@ -68,6 +69,7 @@ function handleJumpingState(scene, input) {
   if (input.up && player.body.touching.down) {
     player.setVelocityY(PLAYER_JUMP_VELOCITY);
     player.anims.play('jump', true);
+    playJump();
   }
 
   if (input.left) {
@@ -122,6 +124,7 @@ function handleAttackingState(scene) {
       const bolt = scene.fireballs.getFirstDead(false);
       if (bolt) {
         bolt.fire(spawnX, spawnY, facingLeft ? -1 : 1);
+        playFire();
       }
     };
 
@@ -157,6 +160,7 @@ function handleAttackExtraState(scene) {
       const wave = scene.slamWaves.getFirstDead(false);
       if (wave) {
         wave.launch(spawnX, spawnY, dir);
+        playSlam();
       }
     };
 
@@ -169,6 +173,7 @@ function handleAttackExtraState(scene) {
         const wave = scene.slamWaves.getFirstDead(false);
         if (wave) {
           wave.launch(player.x + (facingLeft ? -62 : 62), player.y - 18, dir);
+          playSlam();
         }
       }
       scene.playerState = 'idle';

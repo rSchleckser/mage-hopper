@@ -1,4 +1,5 @@
 import { isTouchDevice } from '../input.js';
+import { playUiClick } from '../audio.js';
 
 export function shouldUseDomOverlay() {
   // Portrait / narrow / touch: the letterboxed Phaser canvas shrinks to a thin
@@ -45,6 +46,7 @@ export function bindDomTap(el, fn, opts) {
     setTimeout(() => {
       locked = false;
     }, 400);
+    playUiClick();
     fn(e);
   };
   // pointerdown is the reliable Android Chrome signal; click alone often never fires

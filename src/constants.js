@@ -6,6 +6,12 @@ export const ENEMY_JUMP_VELOCITY = -350;
 export const ENEMY_JUMP_DELAY_MS = 650;
 export const INVULNERABILITY_MS = 1800;
 
+// Melee reach (Rogue): a rectangle extending in front of the player, swept
+// against enemies on attack release.
+export const MELEE_REACH = 90;
+export const MELEE_EXTRA_REACH = 150;
+export const MELEE_HEIGHT_TOLERANCE = 90;
+
 // Collision-box ratios shared by the mage and the knights (same sprite proportions).
 // The x-offset differs by facing direction because the sprite art isn't symmetric.
 export const BODY_WIDTH_RATIO = 0.43;

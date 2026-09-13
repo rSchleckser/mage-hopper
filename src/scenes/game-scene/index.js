@@ -5,6 +5,8 @@ import { makePillButton } from '../../ui/menu-widgets.js';
 import { gameState } from '../../game-state.js';
 import { applyFacingHitbox } from '../../utils/hitbox.js';
 import { PLAYER_MOVE_SPEED, ENEMY_BASE_SPEED } from '../../constants.js';
+import { getCharacter } from '../../characters.js';
+import { getSelectedCharacterId } from '../../character-select.js';
 import { ProjectileGroup } from '../../entities/projectile.js';
 import { SlamWaveGroup } from '../../entities/slam-wave.js';
 import { getLevelConfig, buildPlatforms, ENEMY_SPAWNS } from '../../levels.js';
@@ -40,6 +42,36 @@ function recycleAllProjectiles(scene) {
   if (scene.slamWaves) scene.slamWaves.children.each(recycleOffscreen);
 }
 
+// Texture keys are fixed strings ('player', 'run1', ...) reused across
+// character selections, but Phaser's texture cache skips a load.image() call
+// if the key already exists — so a re-selected character's frames must be
+// explicitly removed first or the previous character's art sticks around.
+function reloadImage(scene, key, url) {
+  if (scene.textures.exists(key)) {
+    scene.textures.remove(key);
+  }
+  scene.load.image(key, url);
+}
+
+// Frame keys are always internally 1-indexed (key + i for i = 1..count),
+// regardless of the on-disk numbering/casing convention for that character.
+function loadCharacterAnim(scene, folder, keyPrefix, def) {
+  for (let i = 1; i <= def.count; i++) {
+    const fileIndex = def.start + (i - 1);
+    reloadImage(scene, keyPrefix + i, `./${folder}/${def.dir}/${def.prefix}${fileIndex}.png`);
+  }
+}
+
+function loadCharacterFrames(scene, character) {
+  reloadImage(scene, 'player', `./${character.folder}/${character.baseFile}`);
+  loadCharacterAnim(scene, character.folder, 'run', character.anims.run);
+  loadCharacterAnim(scene, character.folder, 'jump', character.anims.jump);
+  loadCharacterAnim(scene, character.folder, 'attack', character.anims.attack);
+  loadCharacterAnim(scene, character.folder, 'death', character.anims.death);
+  loadCharacterAnim(scene, character.folder, 'hurt', character.anims.hurt);
+  loadCharacterAnim(scene, character.folder, 'attackExtra', character.anims.attackExtra);
+}
+
 export const gameScene = {
   key: 'Game',
 
@@ -49,30 +81,21 @@ export const gameScene = {
     this.load.image('key', './img/key.png');
     this.load.image('door', './img/door.png');
 
-    // Load player image
-    this.load.image('player', './Mage/mage.png');
     // Load enemy image
     this.load.image('enemy', './Knight/knight.png');
 
-    // Load running animation frames
-    for (let i = 1; i <= 8; i++) this.load.image('run' + i, './Mage/Run/run' + i + '.png');
     // Load enemy running frames
     for (let i = 1; i <= 8; i++) this.load.image('enemyRun' + i, './Knight/Run/run' + i + '.png');
-
-    // Load jumping animation frames
-    for (let i = 1; i <= 7; i++) this.load.image('jump' + i, './Mage/Jump/jump' + i + '.png');
     // Load enemy jumping frames
     for (let i = 1; i <= 7; i++) this.load.image('enemyJump' + i, './Knight/Jump/jump' + i + '.png');
 
-    // Load attack animation
-    for (let i = 1; i <= 7; i++) this.load.image('attack' + i, './Mage/Attack/attack' + i + '.png');
-    // Load fire animation
+    // Selected playable character's body + animation frames (Mage or Rogue)
+    this.character = getCharacter(getSelectedCharacterId());
+    loadCharacterFrames(this, this.character);
+
+    // Fire / Fire_Extra VFX are shared projectile textures, not part of the
+    // player's own body sprite, so they always load regardless of character.
     for (let i = 1; i <= 9; i++) this.load.image('fire' + i, './Mage/Fire/fire' + i + '.png');
-    // Death + hurt
-    for (let i = 1; i <= 10; i++) this.load.image('death' + i, './Mage/Death/death' + i + '.png');
-    for (let i = 1; i <= 4; i++) this.load.image('hurt' + i, './Mage/Hurt/hurt' + i + '.png');
-    // Extra attack: staff swing then fire burst (Attack_Extra + Fire_Extra)
-    for (let i = 0; i <= 6; i++) this.load.image('attackExtra' + i, './Mage/Attack_Extra/attack_extra' + i + '.png');
     for (let i = 1; i <= 9; i++) this.load.image('fireExtra' + i, './Mage/Fire_Extra/fire_extra' + i + '.png');
   },
 
@@ -150,7 +173,7 @@ export const gameScene = {
     this.invulnerableUntil = 0;
     this.playerState = 'idle';
 
-    createAnimations(this);
+    createAnimations(this, this.character);
 
     // Key commands
     this.cursors = this.input.keyboard.createCursorKeys();

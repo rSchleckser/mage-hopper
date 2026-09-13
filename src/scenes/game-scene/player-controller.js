@@ -1,7 +1,21 @@
 import { applyFacingHitbox } from '../../utils/hitbox.js';
-import { PLAYER_MOVE_SPEED, PLAYER_JUMP_VELOCITY } from '../../constants.js';
+import {
+  PLAYER_MOVE_SPEED,
+  PLAYER_JUMP_VELOCITY,
+  MELEE_REACH,
+  MELEE_EXTRA_REACH,
+  MELEE_HEIGHT_TOLERANCE,
+} from '../../constants.js';
 import { touchInput } from '../../input.js';
 import { playJump, playFire, playSlam } from '../../audio.js';
+import { meleeHitEnemiesInFront } from './combat.js';
+
+// The bolt/wave release point is timed as a fraction of the swing animation's
+// total frame count, so it scales correctly whether a character's attack
+// animation has 7 frames (Mage) or 11 (Rogue's Attack_Extra).
+function releaseFrameIndex(frameCount, fraction) {
+  return Math.round((frameCount - 1) * fraction);
+}
 
 function readInput(scene) {
   return {
@@ -105,18 +119,24 @@ function handleFallingState(scene, input) {
 }
 
 function handleAttackingState(scene) {
-  const { player } = scene;
-  // Play attack first; release the bolt near the end of the staff extension
+  const { player, character } = scene;
+  const isMelee = character.combat === 'melee';
+  const frameCount = character.anims.attack.count;
+  const releaseAt = releaseFrameIndex(frameCount, 0.5);
+
+  // Play attack first; release the hit near the middle of the swing
   if (!player.anims.isPlaying || player.anims.currentAnim.key !== 'attack') {
     player.anims.play('attack', true);
     player.setVelocityX(0);
-    let boltReleased = false;
+    let released = false;
 
-    const releaseBoltFromStaff = (anim, frame) => {
-      if (!anim || anim.key !== 'attack' || boltReleased) return;
-      // attack has 7 frames (0..6); release a bit earlier as the staff extends (~frame 3)
-      if (frame.index < 3) return;
-      boltReleased = true;
+    const doRelease = () => {
+      released = true;
+      if (isMelee) {
+        meleeHitEnemiesInFront(scene, MELEE_REACH, MELEE_HEIGHT_TOLERANCE);
+        playFire();
+        return;
+      }
       const facingLeft = player.flipX;
       // Closer to the glowing staff tip
       const spawnX = player.x + (facingLeft ? -58 : 58);
@@ -128,12 +148,18 @@ function handleAttackingState(scene) {
       }
     };
 
-    player.on('animationupdate-attack', releaseBoltFromStaff);
+    const onAttackUpdate = (anim, frame) => {
+      if (!anim || anim.key !== 'attack' || released) return;
+      if (frame.index < releaseAt) return;
+      doRelease();
+    };
+
+    player.on('animationupdate-attack', onAttackUpdate);
     player.once('animationcomplete-attack', () => {
-      player.off('animationupdate-attack', releaseBoltFromStaff);
+      player.off('animationupdate-attack', onAttackUpdate);
       // Fallback if update events were sparse
-      if (!boltReleased) {
-        releaseBoltFromStaff(player.anims.currentAnim, { index: 6 });
+      if (!released) {
+        doRelease();
       }
       scene.playerState = 'idle';
     });
@@ -141,19 +167,27 @@ function handleAttackingState(scene) {
 }
 
 function handleAttackExtraState(scene) {
-  const { player } = scene;
-  // Extra Attack: play staff swing on the mage, then launch Fire_Extra as a traveling wave
+  const { player, character } = scene;
+  const isMelee = character.combat === 'melee';
+  const frameCount = character.anims.attackExtra.count;
+  // Release later in the swing than the light attack, so the wind-up reads
+  // (matches the original ~5-of-7 timing for Mage's 7-frame swing).
+  const releaseAt = releaseFrameIndex(frameCount, 0.83);
+
+  // Extra Attack: play the bigger swing, then release its effect
   if (!player.anims.isPlaying || player.anims.currentAnim.key !== 'attackExtra') {
     player.anims.play('attackExtra', true);
     player.setVelocityX(0);
-    let waveReleased = false;
+    let released = false;
 
-    const releaseWaveFromStaff = (anim, frame) => {
-      if (!anim || anim.key !== 'attackExtra' || waveReleased) return;
-      // 7 frames (0..6); release near the end of the swing so anim plays first
-      if (frame.index < 5) return;
-      waveReleased = true;
+    const doRelease = () => {
+      released = true;
       const facingLeft = player.flipX;
+      if (isMelee) {
+        meleeHitEnemiesInFront(scene, MELEE_EXTRA_REACH, MELEE_HEIGHT_TOLERANCE);
+        playSlam();
+        return;
+      }
       const dir = facingLeft ? -1 : 1;
       const spawnX = player.x + (facingLeft ? -62 : 62);
       const spawnY = player.y - 18;
@@ -164,17 +198,17 @@ function handleAttackExtraState(scene) {
       }
     };
 
-    player.on('animationupdate-attackExtra', releaseWaveFromStaff);
+    const onAttackExtraUpdate = (anim, frame) => {
+      if (!anim || anim.key !== 'attackExtra' || released) return;
+      if (frame.index < releaseAt) return;
+      doRelease();
+    };
+
+    player.on('animationupdate-attackExtra', onAttackExtraUpdate);
     player.once('animationcomplete-attackExtra', () => {
-      player.off('animationupdate-attackExtra', releaseWaveFromStaff);
-      if (!waveReleased) {
-        const facingLeft = player.flipX;
-        const dir = facingLeft ? -1 : 1;
-        const wave = scene.slamWaves.getFirstDead(false);
-        if (wave) {
-          wave.launch(player.x + (facingLeft ? -62 : 62), player.y - 18, dir);
-          playSlam();
-        }
+      player.off('animationupdate-attackExtra', onAttackExtraUpdate);
+      if (!released) {
+        doRelease();
       }
       scene.playerState = 'idle';
     });

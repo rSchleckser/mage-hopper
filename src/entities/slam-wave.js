@@ -6,14 +6,18 @@ export class SlamWave extends Phaser.Physics.Arcade.Sprite {
 
   refreshHitbox() {
     if (!this.body) return;
-    // Tight leading-edge hitbox (128 source); scale applies on top
-    const w = 40;
-    const h = 52;
+    // Sized to the wave's actual opaque content while traveling
+    // (fire_extra1..3.png: bbox ~44,54 to 69,93 on the 128 source), not
+    // pushed out toward the canvas edge — that previously put the hitbox
+    // well ahead of the visible wave. Scale applies on top.
+    const w = 30;
+    const h = 45;
     this.body.setSize(w, h);
+    const contentX = 41;
     if (this.flipX) {
-      this.body.setOffset(10, 38);
+      this.body.setOffset(128 - contentX - w, 51);
     } else {
-      this.body.setOffset(128 - w - 10, 38);
+      this.body.setOffset(contentX, 51);
     }
   }
 

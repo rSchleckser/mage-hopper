@@ -26,39 +26,39 @@ export function defeatEnemy(enemyHit) {
     return;
   }
 
-  // Death sheets are 256 canvases with ~100px empty below the knight; Run is 128
-  // with feet near the bottom. Matching canvas size / origin (0.5,1) still jumps
-  // and shrinks the body. Align opaque CONTENT size + feet on a dedicated FX sprite.
+  // Death PNGs are 256×256 with huge transparent bottom margins (83–100px).
+  // Do NOT originY=1 on the full canvas or match canvas displayHeight (that
+  // floats the body ~75px and shrinks death to ~0.75×). Keep pre-death scale
+  // and plant each frame on opaque content feet / center.
   const frozenFlipX = !!enemyHit.flipX;
+  const frozenScaleX = enemyHit.scaleX || 1.5;
+  const frozenScaleY = enemyHit.scaleY || frozenScaleX;
   const runTexW = enemyHit.width || 128;
   const runTexH = enemyHit.height || 128;
-  const sx = enemyHit.scaleX || 1.5;
-  const sy = enemyHit.scaleY || sx;
   const ox = enemyHit.originX;
   const oy = enemyHit.originY;
 
   // Opaque-content averages from Knight/Run (art faces right, body left of center).
-  const RUN_CONTENT_H = 54;
   const RUN_FEET_FRAC_Y = 0.84;
   const RUN_CX_FRAC = 0.36;
   const runCxFrac = frozenFlipX ? 1 - RUN_CX_FRAC : RUN_CX_FRAC;
-  const worldCx = enemyHit.x + (runCxFrac - ox) * runTexW * sx;
-  const worldFeetY = enemyHit.y + (RUN_FEET_FRAC_Y - oy) * runTexH * sy;
-  const targetContentH = RUN_CONTENT_H * sy;
+  const worldCx = enemyHit.x + (runCxFrac - ox) * runTexW * frozenScaleX;
+  const worldFeetY = enemyHit.y + (RUN_FEET_FRAC_Y - oy) * runTexH * frozenScaleY;
 
-  // Per-frame opaque metrics for Knight/Death/death1..10.png (256 canvases).
+  // Per-frame opaque metrics: origin = content center X / visible feet Y over 256.
+  // visibleBottom from alpha bounds: 156,156,156,157,164,164,159,164,170,173
   const DEATH_CONTENT = [
     null,
-    { ch: 58, feetFracY: 0.6074, cxFrac: 0.5059 },
-    { ch: 65, feetFracY: 0.6074, cxFrac: 0.5 },
-    { ch: 61, feetFracY: 0.6074, cxFrac: 0.5 },
-    { ch: 69, feetFracY: 0.6113, cxFrac: 0.543 },
-    { ch: 73, feetFracY: 0.6387, cxFrac: 0.5254 },
-    { ch: 75, feetFracY: 0.6387, cxFrac: 0.5215 },
-    { ch: 60, feetFracY: 0.6191, cxFrac: 0.498 },
-    { ch: 62, feetFracY: 0.6387, cxFrac: 0.4844 },
-    { ch: 74, feetFracY: 0.6621, cxFrac: 0.4941 },
-    { ch: 81, feetFracY: 0.6738, cxFrac: 0.4434 },
+    { feetFracY: 156 / 256, cxFrac: 0.5059 },
+    { feetFracY: 156 / 256, cxFrac: 0.5 },
+    { feetFracY: 156 / 256, cxFrac: 0.5 },
+    { feetFracY: 157 / 256, cxFrac: 0.543 },
+    { feetFracY: 164 / 256, cxFrac: 0.5254 },
+    { feetFracY: 164 / 256, cxFrac: 0.5215 },
+    { feetFracY: 159 / 256, cxFrac: 0.498 },
+    { feetFracY: 164 / 256, cxFrac: 0.4844 },
+    { feetFracY: 170 / 256, cxFrac: 0.4941 },
+    { feetFracY: 173 / 256, cxFrac: 0.4434 },
   ];
 
   const death = scene.add.sprite(worldCx, worldFeetY, 'enemyDeath1');
@@ -67,7 +67,7 @@ export function defeatEnemy(enemyHit) {
   const applyDeathFrame = (frameNum) => {
     const m = DEATH_CONTENT[frameNum] || DEATH_CONTENT[1];
     death.setOrigin(m.cxFrac, m.feetFracY);
-    death.setScale(targetContentH / m.ch);
+    death.setScale(frozenScaleX, frozenScaleY);
     death.setFlipX(frozenFlipX);
     death.setPosition(worldCx, worldFeetY);
   };

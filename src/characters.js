@@ -1,3 +1,5 @@
+import { PLAYER_MOVE_SPEED } from './constants.js';
+
 // Per-character asset config: folder layout, base texture, combat mode, and
 // the file naming/indexing convention for each animation (these differ
 // between packs — e.g. Rogue's Attack_Extra frames are 1-indexed with 11
@@ -12,6 +14,7 @@ export const CHARACTERS = {
     baseFile: 'mage.png',
     combat: 'ranged',
     tagline: 'Ranged fire magic',
+    moveSpeed: PLAYER_MOVE_SPEED,
     anims: {
       idle: { dir: 'Idle', prefix: 'idle', start: 1, count: 14 },
       run: { dir: 'Run', prefix: 'run', start: 1, count: 8 },
@@ -29,6 +32,9 @@ export const CHARACTERS = {
     baseFile: 'rogue.png',
     combat: 'melee',
     tagline: 'Close-quarters blades',
+    // Faster than Mage to offset having to close to melee range (90-150px)
+    // instead of hitting from anywhere on screen with ranged fire.
+    moveSpeed: Math.round(PLAYER_MOVE_SPEED * 1.3),
     anims: {
       // idle11.png is missing from the pack — 17 frames numbered 1-10, 12-18.
       idle: { dir: 'Idle', prefix: 'idle', indices: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14, 15, 16, 17, 18] },

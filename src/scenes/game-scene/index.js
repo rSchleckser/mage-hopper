@@ -4,7 +4,7 @@ import { hideInstructionsDomUi } from '../../ui/instructions-overlay.js';
 import { makePillButton } from '../../ui/menu-widgets.js';
 import { gameState } from '../../game-state.js';
 import { applyFacingHitbox } from '../../utils/hitbox.js';
-import { PLAYER_MOVE_SPEED, ENEMY_BASE_SPEED } from '../../constants.js';
+import { ENEMY_BASE_SPEED } from '../../constants.js';
 import { getCharacter, frameFileIndices } from '../../characters.js';
 import { getSelectedCharacterId } from '../../character-select.js';
 import { ProjectileGroup } from '../../entities/projectile.js';
@@ -111,7 +111,7 @@ export const gameScene = {
     // HUD
     this.levelIndicator = this.add.text(16, 16, `Level: ${gameState.level}`, { fontSize: '32px', fill: '#000' });
     this.lifeIndicator = this.add.text(1700, 16, `Lives: ${gameState.lives}`, { fontSize: '32px', fill: 'blue' });
-    this.playerSpeedIndicator = this.add.text(500, 16, `Player Speed: ${PLAYER_MOVE_SPEED}`, {
+    this.playerSpeedIndicator = this.add.text(500, 16, `Player Speed: ${this.character.moveSpeed}`, {
       fontSize: '32px',
       fill: 'green',
     });

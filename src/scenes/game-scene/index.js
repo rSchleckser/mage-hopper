@@ -87,6 +87,8 @@ export const gameScene = {
     for (let i = 1; i <= 8; i++) this.load.image('enemyRun' + i, './Knight/Run/run' + i + '.png');
     // Load enemy jumping frames
     for (let i = 1; i <= 7; i++) this.load.image('enemyJump' + i, './Knight/Jump/jump' + i + '.png');
+    // Load enemy death frames
+    for (let i = 1; i <= 10; i++) this.load.image('enemyDeath' + i, './Knight/Death/death' + i + '.png');
 
     // Selected playable character's body + animation frames (Mage or Rogue)
     this.character = getCharacter(getSelectedCharacterId());

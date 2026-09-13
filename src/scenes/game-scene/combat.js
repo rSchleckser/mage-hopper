@@ -4,33 +4,40 @@ import { applyFacingHitbox } from '../../utils/hitbox.js';
 import { INVULNERABILITY_MS } from '../../constants.js';
 import { playEnemyDefeat, playHurt, playKeyCollect } from '../../audio.js';
 
+// Death frames render on a canvas twice the size of every other Knight
+// animation (256px vs 128px), with the character's actual drawn content
+// varying somewhat in size/position frame to frame as it topples. A single
+// fixed scale + origin (averaged from the real frames, not measured per
+// frame) keeps the pose stable for the whole animation — no per-frame
+// lookup table to drift out of sync or make the sprite visibly resize/shift
+// as it plays.
+const DEATH_CONTENT_H = 68; // average opaque content height across death1..10
+const DEATH_ORIGIN_X = 0.5;
+const DEATH_ORIGIN_Y = 0.63;
+const RUN_CONTENT_H = 54; // average opaque content height of the run pose
+
 export function defeatEnemy(enemyHit) {
   if (!enemyHit || enemyHit.getData('defeated')) {
     return;
   }
   enemyHit.setData('defeated', true);
 
-  // Snapshot pose BEFORE disableBody / anim stop / hide — those can change
-  // body metrics and make width/position unreliable on mobile.
+  // Anchor to the enemy's collision box (stable regardless of which pose —
+  // running, idle, jumping — was showing at the moment of death), not to
+  // constants tuned for one specific animation frame.
   const scene = enemyHit.scene;
   const frozenFlipX = !!enemyHit.flipX;
-  const frozenScaleX = enemyHit.scaleX || 1.5;
-  const frozenScaleY = enemyHit.scaleY || frozenScaleX;
-  const runTexW = enemyHit.frame
-    ? enemyHit.frame.realWidth || enemyHit.frame.width || enemyHit.width
-    : enemyHit.width || 128;
-  const runTexH = enemyHit.frame
-    ? enemyHit.frame.realHeight || enemyHit.frame.height || enemyHit.height
-    : enemyHit.height || 128;
-  const ox = enemyHit.originX;
-  const oy = enemyHit.originY;
-  const worldX = enemyHit.x;
-  const worldY = enemyHit.y;
+  const frozenScale = enemyHit.scaleX || 1.5;
+  const body = enemyHit.body;
+  const feetX = body ? body.x + body.width / 2 : enemyHit.x;
+  const feetY = body ? body.y + body.height : enemyHit.y;
   const depth = typeof enemyHit.depth === 'number' ? enemyHit.depth : 0;
+  const scrollFactorX = enemyHit.scrollFactorX;
+  const scrollFactorY = enemyHit.scrollFactorY;
 
   enemyHit.setVelocity(0, 0);
-  if (enemyHit.body) {
-    enemyHit.body.stop();
+  if (body) {
+    body.stop();
   }
   enemyHit.disableBody(true, false);
   enemyHit.anims.stop();
@@ -43,55 +50,19 @@ export function defeatEnemy(enemyHit) {
     return;
   }
 
-  // Run content ~54px tall in 128 canvas; death content varies in 256 canvas.
-  // Preserving scale 1.5 on 256px (#49) doubles display size (384 vs 192).
-  // Match opaque CONTENT height instead, and plant content feet — not canvas bottom.
-  const RUN_CONTENT_H = 54;
-  const RUN_FEET_FRAC_Y = 0.84;
-  const RUN_CX_FRAC = 0.36;
-  const runCxFrac = frozenFlipX ? 1 - RUN_CX_FRAC : RUN_CX_FRAC;
-  const worldCx = worldX + (runCxFrac - ox) * runTexW * frozenScaleX;
-  const worldFeetY = worldY + (RUN_FEET_FRAC_Y - oy) * runTexH * frozenScaleY;
-  const targetContentH = RUN_CONTENT_H * frozenScaleY;
+  const deathScale = (RUN_CONTENT_H * frozenScale) / DEATH_CONTENT_H;
 
-  // Opaque metrics for Knight/Death/death1..10.png (256 canvases).
-  const DEATH_CONTENT = [
-    null,
-    { ch: 58, feetFracY: 156 / 256, cxFrac: 0.5059 },
-    { ch: 65, feetFracY: 156 / 256, cxFrac: 0.5 },
-    { ch: 61, feetFracY: 156 / 256, cxFrac: 0.5 },
-    { ch: 69, feetFracY: 157 / 256, cxFrac: 0.543 },
-    { ch: 73, feetFracY: 164 / 256, cxFrac: 0.5254 },
-    { ch: 75, feetFracY: 164 / 256, cxFrac: 0.5215 },
-    { ch: 60, feetFracY: 159 / 256, cxFrac: 0.498 },
-    { ch: 62, feetFracY: 164 / 256, cxFrac: 0.4844 },
-    { ch: 74, feetFracY: 170 / 256, cxFrac: 0.4941 },
-    { ch: 81, feetFracY: 173 / 256, cxFrac: 0.4434 },
-  ];
-
-  const death = scene.add.sprite(worldCx, worldFeetY, 'enemyDeath1');
+  const death = scene.add.sprite(feetX, feetY, 'enemyDeath1');
+  death.setOrigin(DEATH_ORIGIN_X, DEATH_ORIGIN_Y);
+  death.setScale(deathScale);
+  death.setFlipX(frozenFlipX);
   death.setDepth(depth);
-  death.setScrollFactor(enemyHit.scrollFactorX, enemyHit.scrollFactorY);
-
-  const applyDeathFrame = (frameNum) => {
-    if (!death.active) return;
-    const m = DEATH_CONTENT[frameNum] || DEATH_CONTENT[1];
-    const scale = targetContentH / m.ch;
-    // Origin first, then scale/flip, then lock world feet — avoid canvas originY=1.
-    death.setOrigin(m.cxFrac, m.feetFracY);
-    death.setScale(scale);
-    death.setFlipX(frozenFlipX);
-    death.setPosition(worldCx, worldFeetY);
-  };
+  death.setScrollFactor(scrollFactorX, scrollFactorY);
 
   let finished = false;
   const finish = () => {
     if (finished) return;
     finished = true;
-    if (death && death.off) {
-      death.off('animationupdate-enemyDeath');
-      death.off('animationcomplete-enemyDeath');
-    }
     if (death && death.destroy) {
       death.destroy();
     }
@@ -104,32 +75,11 @@ export function defeatEnemy(enemyHit) {
     }
   };
 
-  const onUpdate = (_anim, frame) => {
-    const key = (frame && (frame.textureKey || (frame.texture && frame.texture.key))) || '';
-    const num = parseInt(String(key).replace(/\D/g, ''), 10) || 1;
-    applyDeathFrame(num);
-  };
-
-  const holdMs = (typeof location !== 'undefined' && /(?:^|[?&])debugDeathHold=1(?:&|$)/.test(location.search))
-    ? 2500
-    : 400;
   death.once('animationcomplete-enemyDeath', () => {
-    // Brief final-pose hold (longer with ?debugDeathHold=1 for screenshot QA).
-    if (scene.time) {
-      scene.time.delayedCall(holdMs, finish);
-    } else {
-      finish();
-    }
+    scene.time.delayedCall(400, finish);
   });
-  death.on('animationupdate-enemyDeath', onUpdate);
   death.anims.play('enemyDeath', true);
-  if (holdMs > 400 && death.anims) {
-    death.anims.timeScale = 0.45; // slower for QA screenshots
-  }
-  applyDeathFrame(1);
-  if (scene.time) {
-    scene.time.delayedCall(2000, finish);
-  }
+  scene.time.delayedCall(2000, finish); // safety net if the anim never completes
 }
 
 // Fireballs fly straight; no platform bounce/stop — cleaned up when off-screen

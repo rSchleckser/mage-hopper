@@ -1,8 +1,8 @@
-import { setMobileControlsVisible } from '../input.js';
+import { setMobileControlsVisible, isTouchDevice } from '../input.js';
 import { dismissRotateHint } from '../rotate-hint.js';
 import { makePillButton } from '../ui/menu-widgets.js';
 import { MENU_COLORS } from '../ui/theme.js';
-import { shouldUseDomOverlay, hideMenuDomUi } from '../ui/dom-overlays.js';
+import { shouldUseDomOverlay, hideMenuDomUi, setGameSurfaceInteractive } from '../ui/dom-overlays.js';
 import { openCharacterSelectDomOverlay, hideCharacterSelectDomUi } from '../ui/character-select-overlay.js';
 import { getAllCharacters, frameFileIndices, frameCount } from '../characters.js';
 import { getSelectedCharacterId, setSelectedCharacterId } from '../character-select.js';
@@ -30,13 +30,35 @@ function attackExtraAnimKey(characterId) {
   return `cs_${characterId}_attack_extra`;
 }
 
-function shouldForceDomCharacterSelect() {
-  // Never leave phones on tiny letterboxed Phaser cards.
+function shouldUseDomCharacterSelect() {
+  // Cream full-viewport picker on phones — but Phaser still owns idle/Attack_Extra.
   return (
     shouldUseDomOverlay() ||
-    window.matchMedia('(max-width: 900px)').matches ||
-    window.matchMedia('(orientation: portrait)').matches
+    (isTouchDevice() && window.matchMedia('(orientation: portrait)').matches) ||
+    window.innerWidth < 700
   );
+}
+
+function defineCsAnim(scene, key, frames, frameRate, repeat) {
+  // AnimationManager persists across scene restarts — recreate so we never keep a
+  // broken empty anim from a prior failed preload.
+  if (scene.anims.exists(key)) {
+    scene.anims.remove(key);
+  }
+  if (!frames.length) return false;
+  scene.anims.create({ key, frames, frameRate, repeat });
+  return true;
+}
+
+function buildAnimFrames(scene, textureKeyFn, characterId, count) {
+  const frames = [];
+  for (let i = 1; i <= count; i++) {
+    const key = textureKeyFn(characterId, i);
+    if (scene.textures.exists(key)) {
+      frames.push({ key });
+    }
+  }
+  return frames;
 }
 
 export const characterSelectScene = {
@@ -70,42 +92,84 @@ export const characterSelectScene = {
 
     const characters = getAllCharacters();
 
+    // Always (re)create idle + Attack_Extra anims from loaded textures.
     characters.forEach((character) => {
-      const idleKey = idleAnimKey(character.id);
-      if (!this.anims.exists(idleKey)) {
-        const frames = [];
-        for (let i = 1; i <= frameCount(character.anims.idle); i++) {
-          frames.push({ key: idleTextureKey(character.id, i) });
-        }
-        this.anims.create({ key: idleKey, frames, frameRate: 10, repeat: -1 });
-      }
+      const idleFrames = buildAnimFrames(
+        this,
+        idleTextureKey,
+        character.id,
+        frameCount(character.anims.idle)
+      );
+      defineCsAnim(this, idleAnimKey(character.id), idleFrames, 10, -1);
+
       const ax = character.anims.attackExtra;
       if (ax) {
-        const axKey = attackExtraAnimKey(character.id);
-        if (!this.anims.exists(axKey)) {
-          const frames = [];
-          for (let i = 1; i <= frameCount(ax); i++) {
-            frames.push({ key: attackExtraTextureKey(character.id, i) });
-          }
-          this.anims.create({ key: axKey, frames, frameRate: 12, repeat: 0 });
-        }
+        const axFrames = buildAnimFrames(this, attackExtraTextureKey, character.id, frameCount(ax));
+        defineCsAnim(this, attackExtraAnimKey(character.id), axFrames, 12, 0);
       }
     });
 
     let selectedId = getSelectedCharacterId();
-    const cardNodes = [];
     let confirming = false;
 
     const goBack = () => {
       if (confirming) return;
       hideCharacterSelectDomUi();
+      setGameSurfaceInteractive(true);
+      if (this.input) this.input.enabled = true;
       this.scene.start('Menu');
     };
 
-    this.events.once('shutdown', () => hideCharacterSelectDomUi());
+    this.events.once('shutdown', () => {
+      hideCharacterSelectDomUi();
+      setGameSurfaceInteractive(true);
+    });
 
-    // Mobile / narrow: cream full-viewport DOM overlay (not letterboxed Phaser cards).
-    if (shouldForceDomCharacterSelect()) {
+    const playAttackExtraThenGame = (characterId) => {
+      setSelectedCharacterId(characterId);
+      confirming = true;
+
+      // Clear picker UI; show a short centered flourish on the nature backdrop.
+      hideCharacterSelectDomUi();
+      setGameSurfaceInteractive(true);
+      if (this.input) this.input.enabled = true;
+
+      // Tear down any prior card sprites so only the flourish is visible.
+      this.children.removeAll(true);
+
+      this.add.image(CX, 400, 'background');
+      this.add.rectangle(CX, 400, 1890, 890, 0x0a1010, 0.28);
+
+      const axKey = attackExtraAnimKey(characterId);
+      const idleKey = idleAnimKey(characterId);
+      const startTex = this.textures.exists(attackExtraTextureKey(characterId, 1))
+        ? attackExtraTextureKey(characterId, 1)
+        : idleTextureKey(characterId, 1);
+
+      const sprite = this.add.sprite(CX, 420, startTex).setScale(3.4);
+      let finished = false;
+      const finish = () => {
+        if (finished || !this.sys.settings.active) return;
+        finished = true;
+        this.scene.start('Game');
+      };
+
+      if (this.anims.exists(axKey)) {
+        sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, (anim) => {
+          if (!anim || anim.key === axKey) finish();
+        });
+        sprite.play(axKey);
+        this.time.delayedCall(1800, () => finish());
+      } else if (this.anims.exists(idleKey)) {
+        sprite.play(idleKey);
+        this.time.delayedCall(500, () => finish());
+      } else {
+        finish();
+      }
+    };
+
+    // —— Mobile cream DOM picker (static portraits) + Phaser Attack_Extra on confirm ——
+    if (shouldUseDomCharacterSelect()) {
       openCharacterSelectDomOverlay(this, {
         characters,
         selectedId,
@@ -113,17 +177,17 @@ export const characterSelectScene = {
           selectedId = id;
         },
         onConfirm: () => {
-          setSelectedCharacterId(selectedId);
-          hideCharacterSelectDomUi();
-          this.scene.start('Game');
+          if (confirming) return;
+          playUiClick();
+          playAttackExtraThenGame(selectedId);
         },
         onBack: goBack,
       });
       return;
     }
 
+    // —— Desktop Phaser cream cards with looping idle + Attack_Extra on confirm ——
     this.add.image(CX, 400, 'background');
-    // Soft dim so cream cards pop (keep nature visible).
     this.add.rectangle(CX, 400, 1890, 890, 0x0a1010, 0.28);
 
     this.add
@@ -138,7 +202,6 @@ export const characterSelectScene = {
       })
       .setOrigin(0.5);
 
-    // Soft cream ribbon for subtitle (menu language, readable over sun).
     const sub = this.add
       .text(0, 0, 'Pick a fighter, then confirm', {
         fontFamily: 'Nunito, system-ui, sans-serif',
@@ -156,18 +219,21 @@ export const characterSelectScene = {
 
     const totalW = characters.length * CARD_W + (characters.length - 1) * CARD_GAP;
     const startX = CX - totalW / 2 + CARD_W / 2;
+    const cardNodes = [];
 
     const drawCard = (character, index) => {
       const cardX = startX + index * (CARD_W + CARD_GAP);
       const isSelected = character.id === selectedId;
 
       const panel = this.add.graphics();
-      const sprite = this.add
-        .sprite(cardX, CARD_Y - 50, idleTextureKey(character.id, 1))
-        .setScale(2.85)
-        .play(idleAnimKey(character.id));
+      const tex = idleTextureKey(character.id, 1);
+      const sprite = this.add.sprite(cardX, CARD_Y - 50, tex).setScale(2.85);
+      const idleKey = idleAnimKey(character.id);
+      if (this.anims.exists(idleKey)) {
+        sprite.play(idleKey);
+      }
 
-      const nameText = this.add
+      this.add
         .text(cardX, CARD_Y + 168, character.name, {
           fontFamily: 'Cinzel, serif',
           fontSize: '32px',
@@ -176,7 +242,7 @@ export const characterSelectScene = {
         })
         .setOrigin(0.5);
 
-      const taglineText = this.add
+      this.add
         .text(cardX, CARD_Y + 208, character.tagline, {
           fontFamily: 'Nunito, system-ui, sans-serif',
           fontSize: '16px',
@@ -187,7 +253,6 @@ export const characterSelectScene = {
 
       const redraw = (selected) => {
         panel.clear();
-        // Cream cards — match Instructions / Level Complete language (no dark ink slabs).
         panel.fillStyle(MENU_COLORS.cream, selected ? 0.98 : 0.9);
         panel.fillRoundedRect(cardX - CARD_W / 2, CARD_Y - CARD_H / 2, CARD_W, CARD_H, 22);
         panel.lineStyle(
@@ -218,7 +283,6 @@ export const characterSelectScene = {
       });
 
       cardNodes.push({ character, redraw, sprite, zone });
-      return [panel, sprite, nameText, taglineText, zone];
     };
 
     characters.forEach((character, index) => drawCard(character, index));
@@ -252,23 +316,25 @@ export const characterSelectScene = {
       const finish = () => {
         if (finished || !this.sys.settings.active) return;
         finished = true;
-        hideCharacterSelectDomUi();
         this.scene.start('Game');
       };
 
-      // Disable further card picks while the flourish plays.
       cardNodes.forEach((c) => {
         if (c.zone && c.zone.disableInteractive) c.zone.disableInteractive();
       });
 
       if (node && node.sprite && this.anims.exists(axKey)) {
+        // Stop idle, play Attack_Extra on the selected card sprite.
+        node.sprite.stop();
         node.sprite.setScale(3.25);
-        node.sprite.once('animationcomplete', finish);
+        node.sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, (anim) => {
+          if (!anim || anim.key === axKey) finish();
+        });
         node.sprite.play(axKey);
-        // Safety timeout if animationcomplete is missed.
-        this.time.delayedCall(1600, () => finish());
+        this.time.delayedCall(1800, () => finish());
       } else {
-        finish();
+        // Fallback: still go to Game, but give a beat if idle is running.
+        this.time.delayedCall(300, () => finish());
       }
     };
     confirmBtn.setOnActivate(confirmSelection);

@@ -5,6 +5,8 @@ import { MENU_COLORS } from '../ui/theme.js';
 import { shouldUseDomOverlay } from '../ui/dom-overlays.js';
 import { openGameOverDomOverlay, hideGameOverDomUi } from '../ui/game-over-overlay.js';
 import { playGameOver } from '../audio.js';
+import { getCharacter } from '../characters.js';
+import { getSelectedCharacterId } from '../character-select.js';
 
 export const gameOverScene = {
   key: 'GameOver',
@@ -19,6 +21,7 @@ export const gameOverScene = {
     const cx = 1000;
     const cy = 445;
     const reachedLevel = gameState.level;
+    const characterName = getCharacter(getSelectedCharacterId()).name;
 
     this.add.image(cx, 400, 'background');
 
@@ -40,6 +43,7 @@ export const gameOverScene = {
     if (shouldUseDomOverlay()) {
       openGameOverDomOverlay(this, {
         level: reachedLevel,
+        characterName,
         onPlayAgain: playAgain,
         onQuit: quitToMenu,
       });
@@ -96,7 +100,7 @@ export const gameOverScene = {
     ribbonText.setPosition(cx, ribbonY);
 
     this.add
-      .text(cx, ribbonY + 56, 'Your mage has fallen...', {
+      .text(cx, ribbonY + 56, `Your ${characterName} has fallen...`, {
         fontFamily: 'Nunito, system-ui, sans-serif',
         fontSize: '26px',
         fontStyle: '800',

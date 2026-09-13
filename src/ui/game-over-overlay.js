@@ -9,7 +9,7 @@ export function hideGameOverDomUi() {
   setGameSurfaceInteractive(true);
 }
 
-export function openGameOverDomOverlay(scene, { level, onPlayAgain, onQuit }) {
+export function openGameOverDomOverlay(scene, { level, characterName, onPlayAgain, onQuit }) {
   let root = document.getElementById('gameover-dom-ui');
   if (!root) {
     root = document.createElement('div');
@@ -24,7 +24,7 @@ export function openGameOverDomOverlay(scene, { level, onPlayAgain, onQuit }) {
     <div class="gameover-panel">
       <h2>Game Over</h2>
       <div class="gameover-ribbon">REACHED LEVEL ${level}</div>
-      <p class="gameover-sub">Your mage has fallen...</p>
+      <p class="gameover-sub">Your ${characterName} has fallen...</p>
       <div class="gameover-actions">
         <button type="button" class="gameover-play-again">Play Again</button>
         <button type="button" class="gameover-quit">Quit</button>

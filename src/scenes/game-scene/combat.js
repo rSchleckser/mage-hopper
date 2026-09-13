@@ -21,10 +21,20 @@ export function defeatEnemy(enemyHit) {
 
   playEnemyDefeat();
 
+  // Freeze pose before swapping to Death frames (256px vs Run 128px) so the
+  // sprite doesn't flip, pop larger, or jump its feet.
+  const frozenFlipX = !!enemyHit.flipX;
+  const targetDisplayH = enemyHit.displayHeight;
+  const feetY = enemyHit.y + enemyHit.displayHeight * (1 - enemyHit.originY);
+  const centerX = enemyHit.x + enemyHit.displayWidth * (0.5 - enemyHit.originX);
+
   let finished = false;
   const finish = () => {
     if (finished || !enemyHit) return;
     finished = true;
+    if (enemyHit.off) {
+      enemyHit.off('animationupdate-enemyDeath', stabilizeDeathPose);
+    }
     enemyHit.setActive(false);
     enemyHit.setVisible(false);
     if (enemyHit.body) {
@@ -32,11 +42,25 @@ export function defeatEnemy(enemyHit) {
     }
   };
 
+  const stabilizeDeathPose = () => {
+    if (!enemyHit || !enemyHit.active) return;
+    enemyHit.setFlipX(frozenFlipX);
+    enemyHit.setOrigin(0.5, 1);
+    const nativeH =
+      (enemyHit.frame && (enemyHit.frame.realHeight || enemyHit.frame.height)) || enemyHit.height || 256;
+    if (nativeH > 0 && targetDisplayH > 0) {
+      enemyHit.setScale(targetDisplayH / nativeH);
+    }
+    enemyHit.setPosition(centerX, feetY);
+  };
+
   const scene = enemyHit.scene;
   if (scene && scene.anims && scene.anims.exists('enemyDeath')) {
     enemyHit.anims.stop();
     enemyHit.once('animationcomplete-enemyDeath', finish);
+    enemyHit.on('animationupdate-enemyDeath', stabilizeDeathPose);
     enemyHit.anims.play('enemyDeath', true);
+    stabilizeDeathPose();
     // Safety if animationcomplete is missed (interrupted scene, missing frames).
     if (scene.time) {
       scene.time.delayedCall(1200, finish);

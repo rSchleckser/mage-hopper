@@ -8,11 +8,11 @@ import { getAllCharacters, frameFileIndices, frameCount } from '../characters.js
 import { getSelectedCharacterId, setSelectedCharacterId } from '../character-select.js';
 import { playUiClick } from '../audio.js';
 
-const CARD_W = 380;
-const CARD_H = 480;
-const CARD_GAP = 70;
+const CARD_W = 420;
+const CARD_H = 520;
+const CARD_GAP = 56;
 const CX = 1000;
-const CARD_Y = 490;
+const CARD_Y = 470;
 
 function idleTextureKey(characterId, frameNum) {
   return `cs_${characterId}_idle${frameNum}`;
@@ -20,6 +20,23 @@ function idleTextureKey(characterId, frameNum) {
 
 function idleAnimKey(characterId) {
   return `cs_${characterId}_idle`;
+}
+
+function attackExtraTextureKey(characterId, frameNum) {
+  return `cs_${characterId}_ax${frameNum}`;
+}
+
+function attackExtraAnimKey(characterId) {
+  return `cs_${characterId}_attack_extra`;
+}
+
+function shouldForceDomCharacterSelect() {
+  // Never leave phones on tiny letterboxed Phaser cards.
+  return (
+    shouldUseDomOverlay() ||
+    window.matchMedia('(max-width: 900px)').matches ||
+    window.matchMedia('(orientation: portrait)').matches
+  );
 }
 
 export const characterSelectScene = {
@@ -34,6 +51,15 @@ export const characterSelectScene = {
           `./${character.folder}/${character.anims.idle.dir}/${character.anims.idle.prefix}${fileIndex}.png`
         );
       });
+      const ax = character.anims.attackExtra;
+      if (ax) {
+        frameFileIndices(ax).forEach((fileIndex, i) => {
+          this.load.image(
+            attackExtraTextureKey(character.id, i + 1),
+            `./${character.folder}/${ax.dir}/${ax.prefix}${fileIndex}.png`
+          );
+        });
+      }
     });
   },
 
@@ -45,50 +71,63 @@ export const characterSelectScene = {
     const characters = getAllCharacters();
 
     characters.forEach((character) => {
-      const key = idleAnimKey(character.id);
-      if (!this.anims.exists(key)) {
+      const idleKey = idleAnimKey(character.id);
+      if (!this.anims.exists(idleKey)) {
         const frames = [];
         for (let i = 1; i <= frameCount(character.anims.idle); i++) {
           frames.push({ key: idleTextureKey(character.id, i) });
         }
-        this.anims.create({ key, frames, frameRate: 10, repeat: -1 });
+        this.anims.create({ key: idleKey, frames, frameRate: 10, repeat: -1 });
+      }
+      const ax = character.anims.attackExtra;
+      if (ax) {
+        const axKey = attackExtraAnimKey(character.id);
+        if (!this.anims.exists(axKey)) {
+          const frames = [];
+          for (let i = 1; i <= frameCount(ax); i++) {
+            frames.push({ key: attackExtraTextureKey(character.id, i) });
+          }
+          this.anims.create({ key: axKey, frames, frameRate: 12, repeat: 0 });
+        }
       }
     });
 
     let selectedId = getSelectedCharacterId();
     const cardNodes = [];
+    let confirming = false;
 
-    const confirmSelection = () => {
-      setSelectedCharacterId(selectedId);
-      hideCharacterSelectDomUi();
-      this.scene.start('Game');
-    };
     const goBack = () => {
+      if (confirming) return;
       hideCharacterSelectDomUi();
       this.scene.start('Menu');
     };
 
     this.events.once('shutdown', () => hideCharacterSelectDomUi());
 
-    // Portrait / touch: the letterboxed canvas is tiny here, use a full-viewport card instead.
-    if (shouldUseDomOverlay()) {
+    // Mobile / narrow: cream full-viewport DOM overlay (not letterboxed Phaser cards).
+    if (shouldForceDomCharacterSelect()) {
       openCharacterSelectDomOverlay(this, {
         characters,
         selectedId,
         onSelect: (id) => {
           selectedId = id;
         },
-        onConfirm: confirmSelection,
+        onConfirm: () => {
+          setSelectedCharacterId(selectedId);
+          hideCharacterSelectDomUi();
+          this.scene.start('Game');
+        },
         onBack: goBack,
       });
       return;
     }
 
     this.add.image(CX, 400, 'background');
-    this.add.rectangle(CX, 400, 1890, 890, 0x0a1010, 0.35);
+    // Soft dim so cream cards pop (keep nature visible).
+    this.add.rectangle(CX, 400, 1890, 890, 0x0a1010, 0.28);
 
     this.add
-      .text(CX, 80, 'CHOOSE YOUR HERO', {
+      .text(CX, 72, 'CHOOSE YOUR HERO', {
         fontFamily: 'Cinzel, serif',
         fontSize: '58px',
         fontStyle: '900',
@@ -99,14 +138,21 @@ export const characterSelectScene = {
       })
       .setOrigin(0.5);
 
-    this.add
-      .text(CX, 140, 'Pick a fighter, then confirm', {
+    // Soft cream ribbon for subtitle (menu language, readable over sun).
+    const sub = this.add
+      .text(0, 0, 'Pick a fighter, then confirm', {
         fontFamily: 'Nunito, system-ui, sans-serif',
         fontSize: '18px',
-        fontStyle: '700',
-        color: 'rgba(255,248,231,0.8)',
+        fontStyle: '800',
+        color: 'rgba(26,36,36,0.72)',
       })
       .setOrigin(0.5);
+    const rw = sub.width + 36;
+    const rh = sub.height + 12;
+    const ribbonG = this.add.graphics();
+    ribbonG.fillStyle(MENU_COLORS.cream, 0.75);
+    ribbonG.fillRoundedRect(CX - rw / 2, 128 - rh / 2, rw, rh, 4);
+    sub.setPosition(CX, 128);
 
     const totalW = characters.length * CARD_W + (characters.length - 1) * CARD_GAP;
     const startX = CX - totalW / 2 + CARD_W / 2;
@@ -117,51 +163,61 @@ export const characterSelectScene = {
 
       const panel = this.add.graphics();
       const sprite = this.add
-        .sprite(cardX, CARD_Y - 70, idleTextureKey(character.id, 1))
-        .setScale(2.2)
+        .sprite(cardX, CARD_Y - 50, idleTextureKey(character.id, 1))
+        .setScale(2.85)
         .play(idleAnimKey(character.id));
 
       const nameText = this.add
-        .text(cardX, CARD_Y + 150, character.name, {
+        .text(cardX, CARD_Y + 168, character.name, {
           fontFamily: 'Cinzel, serif',
-          fontSize: '30px',
+          fontSize: '32px',
           fontStyle: '900',
-          color: '#fff8e7',
+          color: '#1a2424',
         })
         .setOrigin(0.5);
 
       const taglineText = this.add
-        .text(cardX, CARD_Y + 188, character.tagline, {
+        .text(cardX, CARD_Y + 208, character.tagline, {
           fontFamily: 'Nunito, system-ui, sans-serif',
-          fontSize: '15px',
+          fontSize: '16px',
           fontStyle: '700',
-          color: 'rgba(255,248,231,0.75)',
+          color: 'rgba(26,36,36,0.68)',
         })
         .setOrigin(0.5);
 
       const redraw = (selected) => {
         panel.clear();
-        panel.fillStyle(MENU_COLORS.ink, selected ? 0.55 : 0.35);
-        panel.fillRoundedRect(cardX - CARD_W / 2, CARD_Y - CARD_H / 2, CARD_W, CARD_H, 20);
-        panel.lineStyle(selected ? 5 : 2, selected ? MENU_COLORS.tealLite : 0xffffff, selected ? 0.95 : 0.3);
-        panel.strokeRoundedRect(cardX - CARD_W / 2, CARD_Y - CARD_H / 2, CARD_W, CARD_H, 20);
-        sprite.setScale(selected ? 2.35 : 2.2);
+        // Cream cards — match Instructions / Level Complete language (no dark ink slabs).
+        panel.fillStyle(MENU_COLORS.cream, selected ? 0.98 : 0.9);
+        panel.fillRoundedRect(cardX - CARD_W / 2, CARD_Y - CARD_H / 2, CARD_W, CARD_H, 22);
+        panel.lineStyle(
+          selected ? 5 : 2,
+          selected ? MENU_COLORS.tealLite : MENU_COLORS.ink,
+          selected ? 1 : 0.32
+        );
+        panel.strokeRoundedRect(cardX - CARD_W / 2, CARD_Y - CARD_H / 2, CARD_W, CARD_H, 22);
+        if (selected) {
+          panel.lineStyle(3, MENU_COLORS.teal, 0.28);
+          panel.strokeRoundedRect(cardX - CARD_W / 2 - 4, CARD_Y - CARD_H / 2 - 4, CARD_W + 8, CARD_H + 8, 24);
+        }
+        if (!confirming) {
+          sprite.setScale(selected ? 3.15 : 2.85);
+        }
       };
       redraw(isSelected);
 
-      // World-space zone (not nested in a scaled container) so the hit area
-      // stays aligned with the visuals at any FIT letterbox scale.
       const zone = this.add
         .zone(cardX, CARD_Y, CARD_W, CARD_H)
         .setOrigin(0.5)
         .setInteractive({ useHandCursor: true });
       zone.on('pointerup', () => {
+        if (confirming) return;
         playUiClick();
         selectedId = character.id;
         cardNodes.forEach((c) => c.redraw(c.character.id === selectedId));
       });
 
-      cardNodes.push({ character, redraw });
+      cardNodes.push({ character, redraw, sprite, zone });
       return [panel, sprite, nameText, taglineText, zone];
     };
 
@@ -169,24 +225,56 @@ export const characterSelectScene = {
 
     const backBtn = makePillButton(this, 130, 40, 'Back', {
       width: 120,
-      height: 40,
+      height: 44,
       variant: 'secondary',
       fontSize: 15,
       depth: 20,
     });
     backBtn.setOnActivate(goBack);
 
-    const confirmBtn = makePillButton(this, CX, CARD_Y + CARD_H / 2 + 70, 'Start Adventure', {
-      width: 300,
-      height: 58,
+    const confirmBtn = makePillButton(this, CX, CARD_Y + CARD_H / 2 + 72, 'Start Adventure', {
+      width: 320,
+      height: 60,
       variant: 'primary',
       fontSize: 24,
       depth: 20,
     });
+
+    const confirmSelection = () => {
+      if (confirming) return;
+      confirming = true;
+      playUiClick();
+      setSelectedCharacterId(selectedId);
+
+      const node = cardNodes.find((c) => c.character.id === selectedId);
+      const axKey = attackExtraAnimKey(selectedId);
+      let finished = false;
+      const finish = () => {
+        if (finished || !this.sys.settings.active) return;
+        finished = true;
+        hideCharacterSelectDomUi();
+        this.scene.start('Game');
+      };
+
+      // Disable further card picks while the flourish plays.
+      cardNodes.forEach((c) => {
+        if (c.zone && c.zone.disableInteractive) c.zone.disableInteractive();
+      });
+
+      if (node && node.sprite && this.anims.exists(axKey)) {
+        node.sprite.setScale(3.25);
+        node.sprite.once('animationcomplete', finish);
+        node.sprite.play(axKey);
+        // Safety timeout if animationcomplete is missed.
+        this.time.delayedCall(1600, () => finish());
+      } else {
+        finish();
+      }
+    };
     confirmBtn.setOnActivate(confirmSelection);
 
-    // Keyboard: arrows move the highlight, Enter/Space confirms.
     const moveSelection = (dir) => {
+      if (confirming) return;
       const idx = characters.findIndex((c) => c.id === selectedId);
       const nextIdx = (idx + dir + characters.length) % characters.length;
       selectedId = characters[nextIdx].id;

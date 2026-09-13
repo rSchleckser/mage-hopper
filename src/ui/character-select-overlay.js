@@ -25,10 +25,11 @@ export function openCharacterSelectDomOverlay(scene, { characters, selectedId, o
   const cardsHtml = characters
     .map(
       (c) => `
-        <button type="button" class="charselect-card${c.id === currentId ? ' selected' : ''}" data-id="${c.id}">
-          <img src="./${c.folder}/${c.baseFile}" alt="${c.name}" />
+        <button type="button" class="charselect-card${c.id === currentId ? ' selected' : ''}" data-id="${c.id}" aria-pressed="${c.id === currentId ? 'true' : 'false'}">
+          <img src="./${c.folder}/${c.baseFile}" alt="" />
           <span class="charselect-name">${c.name}</span>
           <span class="charselect-tagline">${c.tagline}</span>
+          <span class="charselect-selected-label">Selected</span>
         </button>
       `
     )
@@ -37,6 +38,7 @@ export function openCharacterSelectDomOverlay(scene, { characters, selectedId, o
   root.innerHTML = `
     <div class="charselect-panel">
       <h2>Choose Your Hero</h2>
+      <p class="charselect-sub">Pick a fighter, then confirm</p>
       <div class="charselect-cards">${cardsHtml}</div>
       <div class="charselect-actions">
         <button type="button" class="charselect-back">Back</button>
@@ -49,14 +51,21 @@ export function openCharacterSelectDomOverlay(scene, { characters, selectedId, o
   root.classList.add('show');
   root.setAttribute('aria-hidden', 'false');
 
-  // Keep Phaser/canvas from eating Android touches under the overlay.
   setGameSurfaceInteractive(false);
   if (scene.input) scene.input.enabled = false;
+
+  const syncSelected = () => {
+    root.querySelectorAll('.charselect-card').forEach((c) => {
+      const on = c.dataset.id === currentId;
+      c.classList.toggle('selected', on);
+      c.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+  };
 
   root.querySelectorAll('.charselect-card').forEach((card) => {
     bindDomTap(card, () => {
       currentId = card.dataset.id;
-      root.querySelectorAll('.charselect-card').forEach((c) => c.classList.toggle('selected', c === card));
+      syncSelected();
       onSelect(currentId);
     });
   });

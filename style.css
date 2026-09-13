@@ -841,3 +841,131 @@ body {
 #pause-dom-ui .pause-quit:active {
   background: #f0e6d0;
 }
+
+/* Full-viewport Character Select card on mobile — not trapped in letterboxed canvas */
+#charselect-dom-ui {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  align-items: center;
+  justify-content: center;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+    max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  box-sizing: border-box;
+  background: rgba(10, 16, 16, 0.72);
+  -webkit-tap-highlight-color: transparent;
+  pointer-events: auto !important;
+  touch-action: manipulation;
+  overflow-y: auto;
+}
+#charselect-dom-ui.show {
+  display: flex;
+}
+#charselect-dom-ui .charselect-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(460px, 100%);
+  margin: auto;
+  padding: 28px 22px;
+  background: linear-gradient(180deg, #fff8e7 0%, #f3e6c8 100%);
+  border-radius: 20px;
+  border: 2px solid rgba(26, 36, 36, 0.35);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  color: #1a2424;
+  font-family: Nunito, system-ui, sans-serif;
+  text-align: center;
+  pointer-events: auto !important;
+  position: relative;
+  z-index: 1;
+}
+#charselect-dom-ui .charselect-panel h2 {
+  margin: 0 0 18px;
+  font-family: Cinzel, serif;
+  font-weight: 900;
+  font-size: 1.7rem;
+  color: #1a2424;
+  text-shadow: 0 2px 0 #1f6e6e;
+}
+#charselect-dom-ui .charselect-cards {
+  display: flex;
+  gap: 14px;
+  width: 100%;
+  margin-bottom: 22px;
+}
+#charselect-dom-ui .charselect-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 16px 10px;
+  border-radius: 16px;
+  border: 3px solid rgba(26, 36, 36, 0.2);
+  background: rgba(26, 36, 36, 0.06);
+  cursor: pointer;
+  touch-action: manipulation;
+  pointer-events: auto !important;
+  -webkit-user-select: none;
+  user-select: none;
+}
+#charselect-dom-ui .charselect-card.selected {
+  border-color: #2a9191;
+  background: rgba(42, 145, 145, 0.16);
+  box-shadow: 0 0 0 4px rgba(42, 145, 145, 0.22);
+}
+#charselect-dom-ui .charselect-card img {
+  width: 84px;
+  height: 84px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+#charselect-dom-ui .charselect-name {
+  font-family: Cinzel, serif;
+  font-weight: 900;
+  font-size: 1.05rem;
+  color: #1a2424;
+}
+#charselect-dom-ui .charselect-tagline {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: rgba(26, 36, 36, 0.65);
+}
+#charselect-dom-ui .charselect-actions {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+#charselect-dom-ui .charselect-actions button {
+  min-height: 52px;
+  padding: 12px 16px;
+  border-radius: 999px;
+  font-family: Nunito, system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 1rem;
+  cursor: pointer;
+  touch-action: manipulation;
+  pointer-events: auto !important;
+  -webkit-user-select: none;
+  user-select: none;
+}
+#charselect-dom-ui .charselect-back {
+  flex: 0 0 auto;
+  min-width: 90px;
+  border: 2px solid rgba(26, 36, 36, 0.35);
+  background: #fff8e7;
+  color: #1a2424;
+}
+#charselect-dom-ui .charselect-back:active {
+  background: #f0e6d0;
+}
+#charselect-dom-ui .charselect-confirm {
+  flex: 1;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  background: linear-gradient(180deg, #3aabb0 0%, #1f6e6e 100%);
+  color: #fff;
+}
+#charselect-dom-ui .charselect-confirm:active {
+  background: linear-gradient(180deg, #1f6e6e 0%, #185858 100%);
+}

@@ -9,8 +9,26 @@ export function defeatEnemy(enemyHit) {
     return;
   }
   enemyHit.setData('defeated', true);
+
+  // Snapshot pose BEFORE disableBody / anim stop / hide — those can change
+  // body metrics and make width/position unreliable on mobile.
+  const scene = enemyHit.scene;
+  const frozenFlipX = !!enemyHit.flipX;
+  const frozenScaleX = enemyHit.scaleX || 1.5;
+  const frozenScaleY = enemyHit.scaleY || frozenScaleX;
+  const runTexW = enemyHit.frame
+    ? enemyHit.frame.realWidth || enemyHit.frame.width || enemyHit.width
+    : enemyHit.width || 128;
+  const runTexH = enemyHit.frame
+    ? enemyHit.frame.realHeight || enemyHit.frame.height || enemyHit.height
+    : enemyHit.height || 128;
+  const ox = enemyHit.originX;
+  const oy = enemyHit.originY;
+  const worldX = enemyHit.x;
+  const worldY = enemyHit.y;
+  const depth = typeof enemyHit.depth === 'number' ? enemyHit.depth : 0;
+
   enemyHit.setVelocity(0, 0);
-  // Disable physics/colliders. AI and player-hurt already skip `defeated`.
   if (enemyHit.body) {
     enemyHit.body.stop();
   }
@@ -21,53 +39,47 @@ export function defeatEnemy(enemyHit) {
 
   playEnemyDefeat();
 
-  const scene = enemyHit.scene;
   if (!scene || !scene.anims || !scene.anims.exists('enemyDeath')) {
     return;
   }
 
-  // Death PNGs are 256×256 with huge transparent bottom margins (83–100px).
-  // Do NOT originY=1 on the full canvas or match canvas displayHeight (that
-  // floats the body ~75px and shrinks death to ~0.75×). Keep pre-death scale
-  // and plant each frame on opaque content feet / center.
-  const frozenFlipX = !!enemyHit.flipX;
-  const frozenScaleX = enemyHit.scaleX || 1.5;
-  const frozenScaleY = enemyHit.scaleY || frozenScaleX;
-  const runTexW = enemyHit.width || 128;
-  const runTexH = enemyHit.height || 128;
-  const ox = enemyHit.originX;
-  const oy = enemyHit.originY;
-
-  // Opaque-content averages from Knight/Run (art faces right, body left of center).
+  // Run content ~54px tall in 128 canvas; death content varies in 256 canvas.
+  // Preserving scale 1.5 on 256px (#49) doubles display size (384 vs 192).
+  // Match opaque CONTENT height instead, and plant content feet — not canvas bottom.
+  const RUN_CONTENT_H = 54;
   const RUN_FEET_FRAC_Y = 0.84;
   const RUN_CX_FRAC = 0.36;
   const runCxFrac = frozenFlipX ? 1 - RUN_CX_FRAC : RUN_CX_FRAC;
-  const worldCx = enemyHit.x + (runCxFrac - ox) * runTexW * frozenScaleX;
-  const worldFeetY = enemyHit.y + (RUN_FEET_FRAC_Y - oy) * runTexH * frozenScaleY;
+  const worldCx = worldX + (runCxFrac - ox) * runTexW * frozenScaleX;
+  const worldFeetY = worldY + (RUN_FEET_FRAC_Y - oy) * runTexH * frozenScaleY;
+  const targetContentH = RUN_CONTENT_H * frozenScaleY;
 
-  // Per-frame opaque metrics: origin = content center X / visible feet Y over 256.
-  // visibleBottom from alpha bounds: 156,156,156,157,164,164,159,164,170,173
+  // Opaque metrics for Knight/Death/death1..10.png (256 canvases).
   const DEATH_CONTENT = [
     null,
-    { feetFracY: 156 / 256, cxFrac: 0.5059 },
-    { feetFracY: 156 / 256, cxFrac: 0.5 },
-    { feetFracY: 156 / 256, cxFrac: 0.5 },
-    { feetFracY: 157 / 256, cxFrac: 0.543 },
-    { feetFracY: 164 / 256, cxFrac: 0.5254 },
-    { feetFracY: 164 / 256, cxFrac: 0.5215 },
-    { feetFracY: 159 / 256, cxFrac: 0.498 },
-    { feetFracY: 164 / 256, cxFrac: 0.4844 },
-    { feetFracY: 170 / 256, cxFrac: 0.4941 },
-    { feetFracY: 173 / 256, cxFrac: 0.4434 },
+    { ch: 58, feetFracY: 156 / 256, cxFrac: 0.5059 },
+    { ch: 65, feetFracY: 156 / 256, cxFrac: 0.5 },
+    { ch: 61, feetFracY: 156 / 256, cxFrac: 0.5 },
+    { ch: 69, feetFracY: 157 / 256, cxFrac: 0.543 },
+    { ch: 73, feetFracY: 164 / 256, cxFrac: 0.5254 },
+    { ch: 75, feetFracY: 164 / 256, cxFrac: 0.5215 },
+    { ch: 60, feetFracY: 159 / 256, cxFrac: 0.498 },
+    { ch: 62, feetFracY: 164 / 256, cxFrac: 0.4844 },
+    { ch: 74, feetFracY: 170 / 256, cxFrac: 0.4941 },
+    { ch: 81, feetFracY: 173 / 256, cxFrac: 0.4434 },
   ];
 
   const death = scene.add.sprite(worldCx, worldFeetY, 'enemyDeath1');
-  death.setDepth(typeof enemyHit.depth === 'number' ? enemyHit.depth : 0);
+  death.setDepth(depth);
+  death.setScrollFactor(enemyHit.scrollFactorX, enemyHit.scrollFactorY);
 
   const applyDeathFrame = (frameNum) => {
+    if (!death.active) return;
     const m = DEATH_CONTENT[frameNum] || DEATH_CONTENT[1];
+    const scale = targetContentH / m.ch;
+    // Origin first, then scale/flip, then lock world feet — avoid canvas originY=1.
     death.setOrigin(m.cxFrac, m.feetFracY);
-    death.setScale(frozenScaleX, frozenScaleY);
+    death.setScale(scale);
     death.setFlipX(frozenFlipX);
     death.setPosition(worldCx, worldFeetY);
   };
@@ -76,6 +88,10 @@ export function defeatEnemy(enemyHit) {
   const finish = () => {
     if (finished) return;
     finished = true;
+    if (death && death.off) {
+      death.off('animationupdate-enemyDeath');
+      death.off('animationcomplete-enemyDeath');
+    }
     if (death && death.destroy) {
       death.destroy();
     }
@@ -94,12 +110,25 @@ export function defeatEnemy(enemyHit) {
     applyDeathFrame(num);
   };
 
-  death.once('animationcomplete-enemyDeath', finish);
+  const holdMs = (typeof location !== 'undefined' && /(?:^|[?&])debugDeathHold=1(?:&|$)/.test(location.search))
+    ? 2500
+    : 400;
+  death.once('animationcomplete-enemyDeath', () => {
+    // Brief final-pose hold (longer with ?debugDeathHold=1 for screenshot QA).
+    if (scene.time) {
+      scene.time.delayedCall(holdMs, finish);
+    } else {
+      finish();
+    }
+  });
   death.on('animationupdate-enemyDeath', onUpdate);
   death.anims.play('enemyDeath', true);
+  if (holdMs > 400 && death.anims) {
+    death.anims.timeScale = 0.45; // slower for QA screenshots
+  }
   applyDeathFrame(1);
   if (scene.time) {
-    scene.time.delayedCall(1200, finish);
+    scene.time.delayedCall(2000, finish);
   }
 }
 

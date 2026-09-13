@@ -1,11 +1,5 @@
 import { applyFacingHitbox } from '../../utils/hitbox.js';
-import {
-  PLAYER_MOVE_SPEED,
-  PLAYER_JUMP_VELOCITY,
-  MELEE_REACH,
-  MELEE_EXTRA_REACH,
-  MELEE_HEIGHT_TOLERANCE,
-} from '../../constants.js';
+import { PLAYER_JUMP_VELOCITY, MELEE_REACH, MELEE_EXTRA_REACH, MELEE_HEIGHT_TOLERANCE } from '../../constants.js';
 import { touchInput } from '../../input.js';
 import { playJump, playFire, playSlam } from '../../audio.js';
 import { meleeHitEnemiesInFront } from './combat.js';
@@ -47,16 +41,17 @@ function handleIdleState(scene, input) {
 }
 
 function handleRunningState(scene, input) {
-  const { player } = scene;
+  const { player, character } = scene;
+  const moveSpeed = character.moveSpeed;
   if (input.left) {
-    player.setVelocityX(-PLAYER_MOVE_SPEED);
+    player.setVelocityX(-moveSpeed);
     if (player.body.touching.down) {
       player.anims.play('left', true);
     }
     player.setFlipX(true);
     applyFacingHitbox(player, true);
   } else if (input.right) {
-    player.setVelocityX(PLAYER_MOVE_SPEED);
+    player.setVelocityX(moveSpeed);
     if (player.body.touching.down) {
       player.anims.play('right', true);
     }
@@ -79,7 +74,7 @@ function handleRunningState(scene, input) {
 }
 
 function handleJumpingState(scene, input) {
-  const { player } = scene;
+  const { player, character } = scene;
   if (input.up && player.body.touching.down) {
     player.setVelocityY(PLAYER_JUMP_VELOCITY);
     player.anims.play('jump', true);
@@ -87,11 +82,11 @@ function handleJumpingState(scene, input) {
   }
 
   if (input.left) {
-    player.setVelocityX(-PLAYER_MOVE_SPEED);
+    player.setVelocityX(-character.moveSpeed);
     player.setFlipX(true);
     applyFacingHitbox(player, true);
   } else if (input.right) {
-    player.setVelocityX(PLAYER_MOVE_SPEED);
+    player.setVelocityX(character.moveSpeed);
     player.setFlipX(false);
     applyFacingHitbox(player, false);
   }

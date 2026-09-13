@@ -10,63 +10,96 @@ export function defeatEnemy(enemyHit) {
   }
   enemyHit.setData('defeated', true);
   enemyHit.setVelocity(0, 0);
-  // Disable physics/colliders but keep the sprite visible for the death anim.
-  // (hideGameObject=false). AI and player-hurt process already skip `defeated`.
+  // Disable physics/colliders. AI and player-hurt already skip `defeated`.
   if (enemyHit.body) {
     enemyHit.body.stop();
   }
   enemyHit.disableBody(true, false);
-  enemyHit.setActive(true);
-  enemyHit.setVisible(true);
+  enemyHit.anims.stop();
+  enemyHit.setActive(false);
+  enemyHit.setVisible(false);
 
   playEnemyDefeat();
 
-  // Freeze pose before swapping to Death frames (256px vs Run 128px) so the
-  // sprite doesn't flip, pop larger, or jump its feet.
+  const scene = enemyHit.scene;
+  if (!scene || !scene.anims || !scene.anims.exists('enemyDeath')) {
+    return;
+  }
+
+  // Death sheets are 256 canvases with ~100px empty below the knight; Run is 128
+  // with feet near the bottom. Matching canvas size / origin (0.5,1) still jumps
+  // and shrinks the body. Align opaque CONTENT size + feet on a dedicated FX sprite.
   const frozenFlipX = !!enemyHit.flipX;
-  const targetDisplayH = enemyHit.displayHeight;
-  const feetY = enemyHit.y + enemyHit.displayHeight * (1 - enemyHit.originY);
-  const centerX = enemyHit.x + enemyHit.displayWidth * (0.5 - enemyHit.originX);
+  const runTexW = enemyHit.width || 128;
+  const runTexH = enemyHit.height || 128;
+  const sx = enemyHit.scaleX || 1.5;
+  const sy = enemyHit.scaleY || sx;
+  const ox = enemyHit.originX;
+  const oy = enemyHit.originY;
+
+  // Opaque-content averages from Knight/Run (art faces right, body left of center).
+  const RUN_CONTENT_H = 54;
+  const RUN_FEET_FRAC_Y = 0.84;
+  const RUN_CX_FRAC = 0.36;
+  const runCxFrac = frozenFlipX ? 1 - RUN_CX_FRAC : RUN_CX_FRAC;
+  const worldCx = enemyHit.x + (runCxFrac - ox) * runTexW * sx;
+  const worldFeetY = enemyHit.y + (RUN_FEET_FRAC_Y - oy) * runTexH * sy;
+  const targetContentH = RUN_CONTENT_H * sy;
+
+  // Per-frame opaque metrics for Knight/Death/death1..10.png (256 canvases).
+  const DEATH_CONTENT = [
+    null,
+    { ch: 58, feetFracY: 0.6074, cxFrac: 0.5059 },
+    { ch: 65, feetFracY: 0.6074, cxFrac: 0.5 },
+    { ch: 61, feetFracY: 0.6074, cxFrac: 0.5 },
+    { ch: 69, feetFracY: 0.6113, cxFrac: 0.543 },
+    { ch: 73, feetFracY: 0.6387, cxFrac: 0.5254 },
+    { ch: 75, feetFracY: 0.6387, cxFrac: 0.5215 },
+    { ch: 60, feetFracY: 0.6191, cxFrac: 0.498 },
+    { ch: 62, feetFracY: 0.6387, cxFrac: 0.4844 },
+    { ch: 74, feetFracY: 0.6621, cxFrac: 0.4941 },
+    { ch: 81, feetFracY: 0.6738, cxFrac: 0.4434 },
+  ];
+
+  const death = scene.add.sprite(worldCx, worldFeetY, 'enemyDeath1');
+  death.setDepth(typeof enemyHit.depth === 'number' ? enemyHit.depth : 0);
+
+  const applyDeathFrame = (frameNum) => {
+    const m = DEATH_CONTENT[frameNum] || DEATH_CONTENT[1];
+    death.setOrigin(m.cxFrac, m.feetFracY);
+    death.setScale(targetContentH / m.ch);
+    death.setFlipX(frozenFlipX);
+    death.setPosition(worldCx, worldFeetY);
+  };
 
   let finished = false;
   const finish = () => {
-    if (finished || !enemyHit) return;
+    if (finished) return;
     finished = true;
-    if (enemyHit.off) {
-      enemyHit.off('animationupdate-enemyDeath', stabilizeDeathPose);
+    if (death && death.destroy) {
+      death.destroy();
     }
-    enemyHit.setActive(false);
-    enemyHit.setVisible(false);
-    if (enemyHit.body) {
-      enemyHit.body.enable = false;
+    if (enemyHit) {
+      enemyHit.setActive(false);
+      enemyHit.setVisible(false);
+      if (enemyHit.body) {
+        enemyHit.body.enable = false;
+      }
     }
   };
 
-  const stabilizeDeathPose = () => {
-    if (!enemyHit || !enemyHit.active) return;
-    enemyHit.setFlipX(frozenFlipX);
-    enemyHit.setOrigin(0.5, 1);
-    const nativeH =
-      (enemyHit.frame && (enemyHit.frame.realHeight || enemyHit.frame.height)) || enemyHit.height || 256;
-    if (nativeH > 0 && targetDisplayH > 0) {
-      enemyHit.setScale(targetDisplayH / nativeH);
-    }
-    enemyHit.setPosition(centerX, feetY);
+  const onUpdate = (_anim, frame) => {
+    const key = (frame && (frame.textureKey || (frame.texture && frame.texture.key))) || '';
+    const num = parseInt(String(key).replace(/\D/g, ''), 10) || 1;
+    applyDeathFrame(num);
   };
 
-  const scene = enemyHit.scene;
-  if (scene && scene.anims && scene.anims.exists('enemyDeath')) {
-    enemyHit.anims.stop();
-    enemyHit.once('animationcomplete-enemyDeath', finish);
-    enemyHit.on('animationupdate-enemyDeath', stabilizeDeathPose);
-    enemyHit.anims.play('enemyDeath', true);
-    stabilizeDeathPose();
-    // Safety if animationcomplete is missed (interrupted scene, missing frames).
-    if (scene.time) {
-      scene.time.delayedCall(1200, finish);
-    }
-  } else {
-    finish();
+  death.once('animationcomplete-enemyDeath', finish);
+  death.on('animationupdate-enemyDeath', onUpdate);
+  death.anims.play('enemyDeath', true);
+  applyDeathFrame(1);
+  if (scene.time) {
+    scene.time.delayedCall(1200, finish);
   }
 }
 

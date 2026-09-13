@@ -28,7 +28,7 @@ const config = {
     default: 'arcade',
     arcade: {
       gravity: { y: 300 }, // Set gravity
-      debug: false, // Set to true to see physics bodies
+      debug: true, // Set to true to see physics bodies
     },
   },
   scene: [menuScene, characterSelectScene, gameScene, pauseScene, gameOverScene, levelWinScene, gameWinScene],

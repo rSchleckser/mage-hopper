@@ -866,7 +866,7 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: min(460px, 100%);
+  width: min(520px, 100%);
   margin: auto;
   padding: 28px 22px;
   background: linear-gradient(180deg, #fff8e7 0%, #f3e6c8 100%);
@@ -894,41 +894,64 @@ body {
   width: 100%;
   margin-bottom: 22px;
 }
+#charselect-dom-ui .charselect-sub {
+  margin: -8px 0 18px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: rgba(26, 36, 36, 0.65);
+}
 #charselect-dom-ui .charselect-card {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 16px 10px;
+  gap: 8px;
+  padding: 18px 12px 16px;
   border-radius: 16px;
-  border: 3px solid rgba(26, 36, 36, 0.2);
-  background: rgba(26, 36, 36, 0.06);
+  border: 3px solid rgba(26, 36, 36, 0.22);
+  /* Cream cards — same language as Instructions / Level Complete */
+  background: linear-gradient(180deg, #fffdf6 0%, #fff8e7 100%);
+  box-shadow: 0 4px 14px rgba(26, 36, 36, 0.08);
   cursor: pointer;
   touch-action: manipulation;
   pointer-events: auto !important;
   -webkit-user-select: none;
   user-select: none;
+  min-height: 180px;
 }
 #charselect-dom-ui .charselect-card.selected {
   border-color: #2a9191;
-  background: rgba(42, 145, 145, 0.16);
-  box-shadow: 0 0 0 4px rgba(42, 145, 145, 0.22);
+  background: linear-gradient(180deg, #f3fffe 0%, #e6f6f5 100%);
+  box-shadow: 0 0 0 4px rgba(42, 145, 145, 0.28), 0 6px 18px rgba(31, 110, 110, 0.18);
+}
+#charselect-dom-ui .charselect-selected-label {
+  display: none;
+  margin-top: 2px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #2a9191;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+#charselect-dom-ui .charselect-card.selected .charselect-selected-label {
+  display: inline-block;
 }
 #charselect-dom-ui .charselect-card img {
-  width: 84px;
-  height: 84px;
+  width: 112px;
+  height: 112px;
   object-fit: contain;
   image-rendering: pixelated;
 }
 #charselect-dom-ui .charselect-name {
   font-family: Cinzel, serif;
   font-weight: 900;
-  font-size: 1.05rem;
+  font-size: 1.15rem;
   color: #1a2424;
 }
 #charselect-dom-ui .charselect-tagline {
-  font-size: 0.75rem;
+  font-size: 0.82rem;
   font-weight: 700;
   color: rgba(26, 36, 36, 0.65);
 }

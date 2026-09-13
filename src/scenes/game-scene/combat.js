@@ -48,6 +48,23 @@ export function hitEnemyWithSlamWave(wave, enemyHit) {
   }
 }
 
+// Melee sweep: defeats any active enemy inside a rectangle extending
+// `reach` px in front of the player (per facing) and within `verticalTolerance`
+// px of the player's height. Used by Rogue's melee attacks in place of a
+// spawned projectile.
+export function meleeHitEnemiesInFront(scene, reach, verticalTolerance) {
+  const player = scene.player;
+  const facingLeft = player.flipX;
+  const minX = facingLeft ? player.x - reach : player.x;
+  const maxX = facingLeft ? player.x : player.x + reach;
+  scene.enemies.forEach((enemyHit) => {
+    if (!enemyHit.active || enemyHit.getData('defeated')) return;
+    if (enemyHit.x < minX || enemyHit.x > maxX) return;
+    if (Math.abs(enemyHit.y - player.y) > verticalTolerance) return;
+    defeatEnemy(enemyHit);
+  });
+}
+
 export function slamWaveCanHit(wave, enemyHit) {
   return (
     !!wave &&

@@ -82,8 +82,17 @@ export function defeatEnemy(enemyHit) {
   scene.time.delayedCall(2000, finish); // safety net if the anim never completes
 }
 
+// Registered via `physics.add.overlap(this.fireballs, enemy, ...)` — a Group
+// vs. single-Sprite pair. Phaser's collideSpriteVsGroup always normalizes
+// this to invoke the callback as (singleSprite, groupMember), i.e.
+// (enemy, projectile) — NOT the (group, sprite) order the overlap() call
+// was written in. Getting this backwards meant `defeatEnemy` ran on the
+// fireball instead of the enemy (silently: the enemy still went inactive
+// via the projectile.* calls below, just without ever being marked
+// defeated, and the death animation spawned at the bolt's position instead
+// of the enemy's).
 // Fireballs fly straight; no platform bounce/stop — cleaned up when off-screen
-export function hitEnemyWithFire(projectile, enemyHit) {
+export function hitEnemyWithFire(enemyHit, projectile) {
   if (!enemyHit || !enemyHit.active || enemyHit.getData('defeated')) {
     return;
   }
@@ -96,8 +105,10 @@ export function hitEnemyWithFire(projectile, enemyHit) {
   defeatEnemy(enemyHit);
 }
 
+// Same Group-vs-Sprite parameter order caveat as hitEnemyWithFire above —
+// Phaser invokes this as (enemy, wave), not (wave, enemy).
 // Wave entered enemy hitbox: defeat foe, stop wave, play remaining Fire_Extra
-export function hitEnemyWithSlamWave(wave, enemyHit) {
+export function hitEnemyWithSlamWave(enemyHit, wave) {
   if (!enemyHit || !enemyHit.active || enemyHit.getData('defeated')) {
     return;
   }
@@ -134,7 +145,9 @@ export function meleeHitEnemiesInFront(scene, reach, verticalTolerance) {
   });
 }
 
-export function slamWaveCanHit(wave, enemyHit) {
+// The overlap's process-callback gets the same (enemy, wave) parameter
+// order as the collide-callback above (see hitEnemyWithFire's note).
+export function slamWaveCanHit(enemyHit, wave) {
   return (
     !!wave &&
     wave.active &&

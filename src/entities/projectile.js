@@ -3,14 +3,19 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     super(scene, x, y, 'fire1');
   }
 
-  // The flame's opaque pixels only cover roughly the middle third of the
-  // 32x32 source canvas (fire1..9.png), so the default full-frame body is
-  // much bigger than the visible flame — biased toward the leading edge
-  // (direction of travel), matching how SlamWave sizes its own hitbox.
+  // The flame's opaque pixels cover roughly the middle third of the 32x32
+  // source canvas (fire1..9.png) horizontally, so the default full-frame
+  // body is much wider than the visible flame — biased toward the leading
+  // edge (direction of travel), matching how SlamWave sizes its own hitbox.
+  // Vertically, several frames' flame content reaches all the way to the
+  // canvas bottom (y=32) as it flickers, and — since the bolt's flight
+  // height is spawned a bit above the player's own center — a tight
+  // vertical box left too little overlap with a same-height enemy's hurtbox
+  // for reliable hits, so the box extends down to the canvas edge.
   refreshHitbox() {
     if (!this.body) return;
     const w = 16;
-    const h = 18;
+    const h = 21;
     this.body.setSize(w, h);
     if (this.flipX) {
       this.body.setOffset(2, 11);

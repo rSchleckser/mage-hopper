@@ -5,12 +5,45 @@ import { INVULNERABILITY_MS } from '../../constants.js';
 import { playEnemyDefeat, playHurt, playKeyCollect } from '../../audio.js';
 
 export function defeatEnemy(enemyHit) {
+  if (!enemyHit || enemyHit.getData('defeated')) {
+    return;
+  }
   enemyHit.setData('defeated', true);
   enemyHit.setVelocity(0, 0);
-  enemyHit.disableBody(true, true);
-  enemyHit.setActive(false);
-  enemyHit.setVisible(false);
+  // Disable physics/colliders but keep the sprite visible for the death anim.
+  // (hideGameObject=false). AI and player-hurt process already skip `defeated`.
+  if (enemyHit.body) {
+    enemyHit.body.stop();
+  }
+  enemyHit.disableBody(true, false);
+  enemyHit.setActive(true);
+  enemyHit.setVisible(true);
+
   playEnemyDefeat();
+
+  let finished = false;
+  const finish = () => {
+    if (finished || !enemyHit) return;
+    finished = true;
+    enemyHit.setActive(false);
+    enemyHit.setVisible(false);
+    if (enemyHit.body) {
+      enemyHit.body.enable = false;
+    }
+  };
+
+  const scene = enemyHit.scene;
+  if (scene && scene.anims && scene.anims.exists('enemyDeath')) {
+    enemyHit.anims.stop();
+    enemyHit.once('animationcomplete-enemyDeath', finish);
+    enemyHit.anims.play('enemyDeath', true);
+    // Safety if animationcomplete is missed (interrupted scene, missing frames).
+    if (scene.time) {
+      scene.time.delayedCall(1200, finish);
+    }
+  } else {
+    finish();
+  }
 }
 
 // Fireballs fly straight; no platform bounce/stop — cleaned up when off-screen

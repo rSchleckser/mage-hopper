@@ -91,4 +91,8 @@ export function createAnimations(scene, character) {
   defineAnim(scene, { key: 'enemyRunLeft', frames: enemyRunFrames, frameRate: 10, repeat: -1 });
   defineAnim(scene, { key: 'enemyJump', frames: [enemyJumpFrames[1]], frameRate: 10, repeat: -1 });
   defineAnim(scene, { key: 'enemyFall', frames: [enemyJumpFrames[5]], frameRate: 4, repeat: -1 });
+
+  const enemyDeathFrames = [];
+  for (let i = 1; i <= 10; i++) enemyDeathFrames.push({ key: 'enemyDeath' + i });
+  defineAnim(scene, { key: 'enemyDeath', frames: enemyDeathFrames, frameRate: 10, repeat: 0 });
 }

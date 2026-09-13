@@ -1,6 +1,18 @@
 import { bindDomTap, setGameSurfaceInteractive } from './dom-overlays.js';
 
+// Plain <img> tags can't play a Phaser animation, so the idle loop is faked
+// by cycling the `src` through each frame's file on a timer — same frame
+// rate as the Phaser card's `idle` anim (10fps == 100ms/frame).
+const IDLE_FRAME_MS = 100;
+let idleIntervalIds = [];
+
+function stopIdleAnimations() {
+  idleIntervalIds.forEach((id) => clearInterval(id));
+  idleIntervalIds = [];
+}
+
 export function hideCharacterSelectDomUi() {
+  stopIdleAnimations();
   const root = document.getElementById('charselect-dom-ui');
   if (!root) return;
   root.classList.remove('show');
@@ -10,6 +22,8 @@ export function hideCharacterSelectDomUi() {
 }
 
 export function openCharacterSelectDomOverlay(scene, { characters, selectedId, onSelect, onConfirm, onBack }) {
+  stopIdleAnimations();
+
   let root = document.getElementById('charselect-dom-ui');
   if (!root) {
     root = document.createElement('div');
@@ -23,16 +37,17 @@ export function openCharacterSelectDomOverlay(scene, { characters, selectedId, o
   let currentId = selectedId;
 
   const cardsHtml = characters
-    .map(
-      (c) => `
+    .map((c) => {
+      const firstFrame = c.idleFrameUrls && c.idleFrameUrls.length ? c.idleFrameUrls[0] : `./${c.folder}/${c.baseFile}`;
+      return `
         <button type="button" class="charselect-card${c.id === currentId ? ' selected' : ''}" data-id="${c.id}" aria-pressed="${c.id === currentId ? 'true' : 'false'}">
-          <img src="./${c.folder}/${c.baseFile}" alt="" />
+          <img src="${firstFrame}" alt="" />
           <span class="charselect-name">${c.name}</span>
           <span class="charselect-tagline">${c.tagline}</span>
           <span class="charselect-selected-label">Selected</span>
         </button>
-      `
-    )
+      `;
+    })
     .join('');
 
   root.innerHTML = `
@@ -62,12 +77,25 @@ export function openCharacterSelectDomOverlay(scene, { characters, selectedId, o
     });
   };
 
-  root.querySelectorAll('.charselect-card').forEach((card) => {
+  root.querySelectorAll('.charselect-card').forEach((card, index) => {
     bindDomTap(card, () => {
       currentId = card.dataset.id;
       syncSelected();
       onSelect(currentId);
     });
+
+    const character = characters[index];
+    const urls = character && character.idleFrameUrls;
+    if (urls && urls.length > 1) {
+      const img = card.querySelector('img');
+      let frame = 0;
+      idleIntervalIds.push(
+        setInterval(() => {
+          frame = (frame + 1) % urls.length;
+          img.src = urls[frame];
+        }, IDLE_FRAME_MS)
+      );
+    }
   });
 
   bindDomTap(root.querySelector('.charselect-confirm'), () => {

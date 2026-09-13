@@ -30,6 +30,11 @@ function attackExtraAnimKey(characterId) {
   return `cs_${characterId}_attack_extra`;
 }
 
+function idleFrameUrls(character) {
+  const idle = character.anims.idle;
+  return frameFileIndices(idle).map((fileIndex) => `./${character.folder}/${idle.dir}/${idle.prefix}${fileIndex}.png`);
+}
+
 function shouldUseDomCharacterSelect() {
   // Cream full-viewport picker on phones — but Phaser still owns idle/Attack_Extra.
   return (
@@ -168,10 +173,14 @@ export const characterSelectScene = {
       }
     };
 
-    // —— Mobile cream DOM picker (static portraits) + Phaser Attack_Extra on confirm ——
+    // —— Mobile cream DOM picker (animated idle portraits) + Phaser Attack_Extra on confirm ——
     if (shouldUseDomCharacterSelect()) {
+      const charactersWithIdleFrames = characters.map((character) => ({
+        ...character,
+        idleFrameUrls: idleFrameUrls(character),
+      }));
       openCharacterSelectDomOverlay(this, {
-        characters,
+        characters: charactersWithIdleFrames,
         selectedId,
         onSelect: (id) => {
           selectedId = id;

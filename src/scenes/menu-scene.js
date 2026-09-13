@@ -5,8 +5,6 @@ import { hideMenuDomUi, syncMenuDomUi } from '../ui/dom-overlays.js';
 import { openInstructionsOverlay } from '../ui/instructions-overlay.js';
 import { MENU_COLORS } from '../ui/theme.js';
 import { isMuted, toggleMuted } from '../audio.js';
-import { getSelectedCharacterId, toggleSelectedCharacter } from '../character-select.js';
-import { getCharacter } from '../characters.js';
 
 export const menuScene = {
   key: 'Menu',
@@ -140,7 +138,7 @@ export const menuScene = {
 
       const onStart = () => {
         hideMenuDomUi();
-        this.scene.start('Game');
+        this.scene.start('CharacterSelect');
       };
       const onInstr = () => {
         hideMenuDomUi();
@@ -174,21 +172,6 @@ export const menuScene = {
         soundBtn.setLabel(nowMuted ? 'Sound: Off' : 'Sound: On');
       });
       nodes.push(soundBtn);
-
-      // Mirrors the Sound toggle: fixed corner position outside the scaled
-      // group, opposite side, so its Phaser hit-zone stays correctly aligned.
-      const charBtn = makePillButton(this, 200, 40, `Hero: ${getCharacter(getSelectedCharacterId()).name}`, {
-        width: 150,
-        height: 40,
-        variant: 'secondary',
-        fontSize: 15,
-        depth: 20,
-      });
-      charBtn.setOnActivate(() => {
-        const nextId = toggleSelectedCharacter();
-        charBtn.setLabel(`Hero: ${getCharacter(nextId).name}`);
-      });
-      nodes.push(charBtn);
 
       // DOM hits from scaled world positions (fat min target kept inside syncMenuDomUi).
       const pad = 12;

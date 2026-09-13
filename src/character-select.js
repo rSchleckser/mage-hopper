@@ -23,8 +23,3 @@ export function setSelectedCharacterId(id) {
     localStorage.setItem(STORAGE_KEY, selectedId);
   } catch (e) {}
 }
-
-export function toggleSelectedCharacter() {
-  setSelectedCharacterId(selectedId === 'mage' ? 'rogue' : 'mage');
-  return selectedId;
-}

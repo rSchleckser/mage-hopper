@@ -5,7 +5,7 @@ import { makePillButton } from '../../ui/menu-widgets.js';
 import { gameState } from '../../game-state.js';
 import { applyFacingHitbox } from '../../utils/hitbox.js';
 import { PLAYER_MOVE_SPEED, ENEMY_BASE_SPEED } from '../../constants.js';
-import { getCharacter } from '../../characters.js';
+import { getCharacter, frameFileIndices } from '../../characters.js';
 import { getSelectedCharacterId } from '../../character-select.js';
 import { ProjectileGroup } from '../../entities/projectile.js';
 import { SlamWaveGroup } from '../../entities/slam-wave.js';
@@ -56,10 +56,9 @@ function reloadImage(scene, key, url) {
 // Frame keys are always internally 1-indexed (key + i for i = 1..count),
 // regardless of the on-disk numbering/casing convention for that character.
 function loadCharacterAnim(scene, folder, keyPrefix, def) {
-  for (let i = 1; i <= def.count; i++) {
-    const fileIndex = def.start + (i - 1);
-    reloadImage(scene, keyPrefix + i, `./${folder}/${def.dir}/${def.prefix}${fileIndex}.png`);
-  }
+  frameFileIndices(def).forEach((fileIndex, i) => {
+    reloadImage(scene, keyPrefix + (i + 1), `./${folder}/${def.dir}/${def.prefix}${fileIndex}.png`);
+  });
 }
 
 function loadCharacterFrames(scene, character) {

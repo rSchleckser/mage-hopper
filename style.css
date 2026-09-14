@@ -902,6 +902,7 @@ body {
 }
 #charselect-dom-ui .charselect-card {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -939,8 +940,10 @@ body {
   display: inline-block;
 }
 #charselect-dom-ui .charselect-card img {
-  width: 112px;
-  height: 112px;
+  width: 100%;
+  max-width: 112px;
+  height: auto;
+  aspect-ratio: 1 / 1;
   object-fit: contain;
   image-rendering: pixelated;
 }

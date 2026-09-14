@@ -1,4 +1,4 @@
-import { PLAYER_MOVE_SPEED } from './constants.js';
+import { PLAYER_MOVE_SPEED, MELEE_REACH, MELEE_EXTRA_REACH } from './constants.js';
 
 // Per-character asset config: folder layout, base texture, combat mode, and
 // the file naming/indexing convention for each animation (these differ
@@ -15,6 +15,7 @@ export const CHARACTERS = {
     combat: 'ranged',
     tagline: 'Ranged fire magic',
     moveSpeed: PLAYER_MOVE_SPEED,
+    startingLives: 3,
     anims: {
       idle: { dir: 'Idle', prefix: 'idle', start: 1, count: 14 },
       run: { dir: 'Run', prefix: 'run', start: 1, count: 8 },
@@ -35,6 +36,7 @@ export const CHARACTERS = {
     // Faster than Mage to offset having to close to melee range (90-150px)
     // instead of hitting from anywhere on screen with ranged fire.
     moveSpeed: Math.round(PLAYER_MOVE_SPEED * 1.3),
+    startingLives: 3,
     anims: {
       // idle11.png is missing from the pack — 17 frames numbered 1-10, 12-18.
       idle: { dir: 'Idle', prefix: 'idle', indices: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14, 15, 16, 17, 18] },
@@ -44,6 +46,30 @@ export const CHARACTERS = {
       death: { dir: 'Death', prefix: 'death', start: 1, count: 10 },
       hurt: { dir: 'Hurt', prefix: 'hurt', start: 1, count: 4 },
       attackExtra: { dir: 'Attack_Extra', prefix: 'attack_extra', start: 1, count: 11 },
+    },
+  },
+  knight: {
+    id: 'knight',
+    name: 'Knight',
+    folder: 'Knight',
+    baseFile: 'knight.png',
+    combat: 'melee',
+    tagline: 'Slow, tough, hits hard',
+    // Slower than either Mage or Rogue — the tradeoff for extra lives and a
+    // longer, more forgiving melee reach below.
+    moveSpeed: Math.round(PLAYER_MOVE_SPEED * 0.8),
+    startingLives: 4,
+    meleeReach: MELEE_REACH + 20,
+    meleeExtraReach: MELEE_EXTRA_REACH + 20,
+    anims: {
+      idle: { dir: 'Idle', prefix: 'idle', start: 1, count: 12 },
+      run: { dir: 'Run', prefix: 'run', start: 1, count: 8 },
+      jump: { dir: 'Jump', prefix: 'jump', start: 1, count: 7 },
+      // Attack frames are 0-indexed here, unlike Mage/Rogue's Attack folders.
+      attack: { dir: 'Attack', prefix: 'attack', start: 0, count: 5 },
+      death: { dir: 'Death', prefix: 'death', start: 1, count: 10 },
+      hurt: { dir: 'Hurt', prefix: 'hurt', start: 1, count: 4 },
+      attackExtra: { dir: 'Attack_Extra', prefix: 'attack_extra', start: 1, count: 8 },
     },
   },
 };

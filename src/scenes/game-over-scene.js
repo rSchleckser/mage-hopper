@@ -6,7 +6,7 @@ import { shouldUseDomOverlay } from '../ui/dom-overlays.js';
 import { openGameOverDomOverlay, hideGameOverDomUi } from '../ui/game-over-overlay.js';
 import { playGameOver } from '../audio.js';
 import { getCharacter } from '../characters.js';
-import { getSelectedCharacterId } from '../character-select.js';
+import { getSelectedCharacterId, livesForSelectedCharacter } from '../character-select.js';
 
 export const gameOverScene = {
   key: 'GameOver',
@@ -26,12 +26,12 @@ export const gameOverScene = {
     this.add.image(cx, 400, 'background');
 
     const playAgain = () => {
-      gameState.lives = 3;
+      gameState.lives = livesForSelectedCharacter();
       gameState.level = 1;
       this.scene.start('Game');
     };
     const quitToMenu = () => {
-      gameState.lives = 3;
+      gameState.lives = livesForSelectedCharacter();
       gameState.level = 1;
       gameState.collectedKey = false;
       this.scene.start('Menu');

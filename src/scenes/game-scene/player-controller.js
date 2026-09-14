@@ -128,7 +128,7 @@ function handleAttackingState(scene) {
     const doRelease = () => {
       released = true;
       if (isMelee) {
-        meleeHitEnemiesInFront(scene, MELEE_REACH, MELEE_HEIGHT_TOLERANCE);
+        meleeHitEnemiesInFront(scene, character.meleeReach ?? MELEE_REACH, MELEE_HEIGHT_TOLERANCE);
         playFire();
         return;
       }
@@ -179,7 +179,7 @@ function handleAttackExtraState(scene) {
       released = true;
       const facingLeft = player.flipX;
       if (isMelee) {
-        meleeHitEnemiesInFront(scene, MELEE_EXTRA_REACH, MELEE_HEIGHT_TOLERANCE);
+        meleeHitEnemiesInFront(scene, character.meleeExtraReach ?? MELEE_EXTRA_REACH, MELEE_HEIGHT_TOLERANCE);
         playSlam();
         return;
       }

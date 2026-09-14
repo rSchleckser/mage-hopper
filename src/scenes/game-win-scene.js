@@ -1,4 +1,5 @@
 import { gameState } from '../game-state.js';
+import { livesForSelectedCharacter } from '../character-select.js';
 import { setMobileControlsVisible } from '../input.js';
 import { makePillButton } from '../ui/menu-widgets.js';
 import { MENU_COLORS } from '../ui/theme.js';
@@ -24,12 +25,12 @@ export const gameWinScene = {
     this.add.image(cx, 400, 'background');
 
     const playAgain = () => {
-      gameState.lives = 3;
+      gameState.lives = livesForSelectedCharacter();
       gameState.level = 1;
       this.scene.start('Game');
     };
     const quitToMenu = () => {
-      gameState.lives = 3;
+      gameState.lives = livesForSelectedCharacter();
       gameState.level = 1;
       gameState.collectedKey = false;
       this.scene.start('Menu');

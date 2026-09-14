@@ -5,8 +5,9 @@ import { MENU_COLORS } from '../ui/theme.js';
 import { shouldUseDomOverlay, hideMenuDomUi, setGameSurfaceInteractive } from '../ui/dom-overlays.js';
 import { openCharacterSelectDomOverlay, hideCharacterSelectDomUi } from '../ui/character-select-overlay.js';
 import { getAllCharacters, frameFileIndices, frameCount } from '../characters.js';
-import { getSelectedCharacterId, setSelectedCharacterId } from '../character-select.js';
+import { getSelectedCharacterId, setSelectedCharacterId, livesForSelectedCharacter } from '../character-select.js';
 import { playUiClick } from '../audio.js';
+import { gameState } from '../game-state.js';
 
 const CARD_W = 420;
 const CARD_H = 520;
@@ -132,6 +133,7 @@ export const characterSelectScene = {
 
     const playAttackExtraThenGame = (characterId) => {
       setSelectedCharacterId(characterId);
+      gameState.lives = livesForSelectedCharacter();
       confirming = true;
 
       // Clear picker UI; show a short centered flourish on the nature backdrop.
@@ -318,6 +320,7 @@ export const characterSelectScene = {
       confirming = true;
       playUiClick();
       setSelectedCharacterId(selectedId);
+      gameState.lives = livesForSelectedCharacter();
 
       const node = cardNodes.find((c) => c.character.id === selectedId);
       const axKey = attackExtraAnimKey(selectedId);

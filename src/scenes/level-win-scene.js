@@ -1,4 +1,5 @@
 import { gameState } from '../game-state.js';
+import { livesForSelectedCharacter } from '../character-select.js';
 import { setMobileControlsVisible } from '../input.js';
 import { makePillButton } from '../ui/menu-widgets.js';
 import { MENU_COLORS } from '../ui/theme.js';
@@ -26,7 +27,7 @@ export const levelWinScene = {
     this.add.image(cx, 400, 'Background');
 
     const goToNextLevel = () => {
-      gameState.lives = 3;
+      gameState.lives = livesForSelectedCharacter();
       this.scene.start('Game');
     };
 

@@ -156,7 +156,11 @@ export function openInstructionsOverlay(scene) {
   overlay.setDepth(200);
   scene._instructionsOverlay = overlay;
 
-  const dim = scene.add.rectangle(1000, 400, 1890, 890, 0x0a1010, 0.55);
+  // 945,445 is the world's true center (1890x890) — this rectangle is sized
+  // exactly to the world with no bleed margin, so unlike the cx/400 used for
+  // other elements, it must be dead-center or it leaves the left/bottom
+  // strips of the world uncovered.
+  const dim = scene.add.rectangle(945, 445, 1890, 890, 0x0a1010, 0.55);
   dim.setInteractive(); // block clicks to menu beneath
   overlay.add(dim);
 

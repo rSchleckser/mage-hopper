@@ -51,7 +51,10 @@ export const gameWinScene = {
     }
 
     // Dim the backdrop so the card pops, same language as the other end-game cards
-    this.add.rectangle(cx, 400, 1890, 890, 0x0a1010, 0.35);
+    // 945,445 is the world's true center — this rectangle is sized exactly
+    // to the world (1890x890) with no bleed margin, so it must be dead-center
+    // or it leaves the left/bottom strips of the world uncovered.
+    this.add.rectangle(945, 445, 1890, 890, 0x0a1010, 0.35);
 
     const panelW = 640;
     const panelH = 400;

@@ -57,7 +57,10 @@ export const pauseScene = {
     }
 
     // Dim the frozen Game scene behind this card (same language as the other overlays)
-    this.add.rectangle(cx, 400, 1890, 890, 0x0a1010, 0.55).setInteractive();
+    // 945,445 is the world's true center — this rectangle is sized exactly
+    // to the world (1890x890) with no bleed margin, so it must be dead-center
+    // or it leaves the left/bottom strips of the world uncovered.
+    this.add.rectangle(945, 445, 1890, 890, 0x0a1010, 0.55).setInteractive();
 
     const panelW = 480;
     const panelH = 400;

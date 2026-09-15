@@ -151,7 +151,12 @@ export const characterSelectScene = {
       this.children.removeAll(true);
 
       this.add.image(CX, 400, 'background');
-      this.add.rectangle(CX, 400, 1890, 890, 0x0a1010, 0.28);
+      // 945,445 is the world's true center — this rectangle is sized exactly
+      // to the world (1890x890) with no bleed margin, so it must be
+      // dead-center or it leaves the left/bottom strips of the world
+      // uncovered (unlike the background image, which is much larger than
+      // the world and bleeds past the edges regardless).
+      this.add.rectangle(945, 445, 1890, 890, 0x0a1010, 0.28);
 
       const axKey = attackExtraAnimKey(characterId);
       const idleKey = idleAnimKey(characterId);
@@ -205,7 +210,8 @@ export const characterSelectScene = {
 
     // —— Desktop Phaser cream cards with looping idle + Attack_Extra on confirm ——
     this.add.image(CX, 400, 'background');
-    this.add.rectangle(CX, 400, 1890, 890, 0x0a1010, 0.28);
+    // See the comment on the equivalent rectangle in the mobile flourish path above.
+    this.add.rectangle(945, 445, 1890, 890, 0x0a1010, 0.28);
 
     this.add
       .text(CX, 72, 'CHOOSE YOUR HERO', {

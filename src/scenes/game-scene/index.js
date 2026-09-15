@@ -4,7 +4,7 @@ import { hideInstructionsDomUi } from '../../ui/instructions-overlay.js';
 import { makePillButton } from '../../ui/menu-widgets.js';
 import { gameState } from '../../game-state.js';
 import { applyFacingHitbox } from '../../utils/hitbox.js';
-import { ENEMY_BASE_SPEED, ENEMY_HP, FALL_GRAVITY_BOOST } from '../../constants.js';
+import { ENEMY_HP, FALL_GRAVITY_BOOST } from '../../constants.js';
 import { getCharacter, frameFileIndices } from '../../characters.js';
 import { getSelectedCharacterId } from '../../character-select.js';
 import { ProjectileGroup } from '../../entities/projectile.js';
@@ -14,6 +14,7 @@ import { createAnimations } from './animations.js';
 import { enemyFollows, createEnemyHealthBar } from './enemy-ai.js';
 import { hitEnemyWithFire, hitEnemyWithSlamWave, slamWaveCanHit, collectKey, enterDoor } from './combat.js';
 import { updatePlayer } from './player-controller.js';
+import { createHud } from './hud.js';
 
 function recycleOffscreen(bolt) {
   if (!bolt.active || !bolt.body) return;
@@ -131,23 +132,10 @@ export const gameScene = {
     // fully respawned on restart.
     gameState.hp = this.character.maxHp;
 
-    // HUD
-    this.levelIndicator = this.add.text(16, 16, `Level: ${gameState.level}`, { fontSize: '32px', fill: '#000' });
-    this.lifeIndicator = this.add.text(1700, 16, `Lives: ${gameState.lives}`, { fontSize: '32px', fill: 'blue' });
-    this.hpIndicator = this.add.text(1700, 50, `HP: ${gameState.hp}/${this.character.maxHp}`, {
-      fontSize: '28px',
-      fill: 'blue',
-    });
-    this.playerSpeedIndicator = this.add.text(500, 16, `Player Speed: ${this.character.moveSpeed}`, {
-      fontSize: '32px',
-      fill: 'green',
-    });
-    this.enemySpeedIndicator = this.add.text(
-      900,
-      16,
-      `Enemy Speed: ${parseInt(ENEMY_BASE_SPEED * (1 + gameState.level / 8.3))}`,
-      { fontSize: '32px', fill: 'red' }
-    );
+    // HUD (level/lives badges + health bar match the game's parchment/teal
+    // UI; player/enemy speed readouts are debug-only, hidden until toggled
+    // with the backtick key — see hud.js).
+    createHud(this);
 
     // Key — placed at its exact authored resting position, not dropped and
     // caught by gravity. The key/door collision boxes are much taller than

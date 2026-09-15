@@ -3,6 +3,7 @@ import { setMobileControlsVisible } from '../../input.js';
 import { applyFacingHitbox } from '../../utils/hitbox.js';
 import { INVULNERABILITY_MS, ENEMY_HP, ENEMY_CONTACT_DAMAGE } from '../../constants.js';
 import { playEnemyDefeat, playHurt, playKeyCollect } from '../../audio.js';
+import { drawHealthBar, updateLivesBadge } from './hud.js';
 
 // Death frames render on a canvas twice the size of every other Knight
 // animation (256px vs 128px), with the character's actual drawn content
@@ -223,12 +224,12 @@ export function damagePlayer(player, enemyHit) {
 
   if (losingLife) {
     gameState.lives -= 1;
-    this.lifeIndicator.setText(`Lives: ${gameState.lives}`);
+    updateLivesBadge(this);
     if (!dying) {
       gameState.hp = this.character.maxHp;
     }
   }
-  this.hpIndicator.setText(`HP: ${Math.max(gameState.hp, 0)}/${this.character.maxHp}`);
+  drawHealthBar(this);
 
   if (!dying) {
     this.playerState = 'hurt';

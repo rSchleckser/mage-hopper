@@ -1,7 +1,8 @@
 import { setMobileControlsVisible } from '../input.js';
 import { dismissRotateHint } from '../rotate-hint.js';
 import { getMenuLayout, makePillButton } from '../ui/menu-widgets.js';
-import { hideMenuDomUi, syncMenuDomUi } from '../ui/dom-overlays.js';
+import { hideMenuDomUi, syncMenuDomUi, shouldUseDomOverlay } from '../ui/dom-overlays.js';
+import { openMainMenuDomOverlay, hideMainMenuDomUi } from '../ui/main-menu-overlay.js';
 import { openInstructionsOverlay } from '../ui/instructions-overlay.js';
 import { MENU_COLORS } from '../ui/theme.js';
 import { isMuted, toggleMuted } from '../audio.js';
@@ -16,6 +17,25 @@ export const menuScene = {
   create: function () {
     setMobileControlsVisible(false);
     dismissRotateHint();
+    hideMainMenuDomUi();
+
+    // Portrait / narrow / touch: the letterboxed canvas shrinks the title and
+    // buttons to near-illegible sizes — use a full-viewport DOM overlay sized
+    // to the real screen instead (same treatment as Pause/Instructions/etc).
+    // The overlay's own CSS background covers the backdrop, so the canvas
+    // doesn't need its background image drawn behind it in this branch.
+    if (shouldUseDomOverlay()) {
+      const onStart = () => {
+        hideMainMenuDomUi();
+        this.scene.start('CharacterSelect');
+      };
+      const onInstr = () => openInstructionsOverlay(this);
+      const onToggleMute = () => toggleMuted();
+
+      openMainMenuDomOverlay(this, { muted: isMuted(), onStart, onInstr, onToggleMute });
+      this.events.once('shutdown', () => hideMainMenuDomUi());
+      return;
+    }
 
     const destroyMenu = () => {
       if (this._menuNodes) {

@@ -4,7 +4,7 @@ import { hideInstructionsDomUi } from '../../ui/instructions-overlay.js';
 import { makePillButton } from '../../ui/menu-widgets.js';
 import { gameState } from '../../game-state.js';
 import { applyFacingHitbox } from '../../utils/hitbox.js';
-import { ENEMY_BASE_SPEED, ENEMY_HP } from '../../constants.js';
+import { ENEMY_BASE_SPEED, ENEMY_HP, FALL_GRAVITY_BOOST } from '../../constants.js';
 import { getCharacter, frameFileIndices } from '../../characters.js';
 import { getSelectedCharacterId } from '../../character-select.js';
 import { ProjectileGroup } from '../../entities/projectile.js';
@@ -32,6 +32,13 @@ function recycleOffscreen(bolt) {
 function recycleAllProjectiles(scene) {
   if (scene.fireballs) scene.fireballs.children.each(recycleOffscreen);
   if (scene.slamWaves) scene.slamWaves.children.each(recycleOffscreen);
+}
+
+// Extra gravity only while actually falling (rise is untouched, so jump
+// height/reach are unaffected) — snappier landings without a floaty hang.
+function applyFallBoost(body) {
+  if (!body) return;
+  body.gravity.y = body.velocity.y > 0 ? FALL_GRAVITY_BOOST : 0;
 }
 
 // Texture keys are fixed strings ('player', 'run1', ...) reused across
@@ -223,6 +230,11 @@ export const gameScene = {
   },
 
   update: function () {
+    // Gravity still acts on falling bodies regardless of playerState/aiState,
+    // so this runs unconditionally every frame, before the early-return below.
+    applyFallBoost(this.player.body);
+    this.enemies.forEach((enemy) => applyFallBoost(enemy.body));
+
     // Let hurt/death anims play without movement stealing control
     if (this.playerState === 'dying' || this.playerState === 'hurt') {
       recycleAllProjectiles(this);

@@ -36,38 +36,23 @@ export function drawEnemyHealthBar(enemy) {
   bar.fillRect(x, y, HP_BAR_WIDTH * (hp / ENEMY_HP), HP_BAR_HEIGHT);
 }
 
-// Enemy attack swing — mirrors the frame-fraction release timing the player's
-// own attacks use in player-controller.js. Damage only lands from this
-// release, not from mere contact (see index.js's plain player/enemy collider).
+// Enemy attack: the hit lands immediately on commit — a strike should land
+// as soon as the enemy is in proximity, not after a telegraphed wind-up (the
+// swing animation still plays afterward, purely as visual follow-through).
+// Damage only lands from a triggered attack, not from mere contact (see
+// index.js's plain player/enemy collider).
 function beginEnemyAttack(enemy, scene) {
   enemy.setData('aiState', 'attacking');
   enemy.setVelocityX(0);
   enemy.anims.play('enemyAttack', true);
 
-  let released = false;
-  const releaseAt = 2; // middle-ish of the 5-frame swing (indices 0-4)
+  const dx = Math.abs(scene.player.x - enemy.x);
+  const dy = Math.abs(scene.player.y - enemy.y);
+  if (dx <= ENEMY_ATTACK_RANGE && dy <= MELEE_HEIGHT_TOLERANCE) {
+    damagePlayer.call(scene, scene.player, enemy);
+  }
 
-  const doRelease = () => {
-    released = true;
-    const dx = Math.abs(scene.player.x - enemy.x);
-    const dy = Math.abs(scene.player.y - enemy.y);
-    if (dx <= ENEMY_ATTACK_RANGE && dy <= MELEE_HEIGHT_TOLERANCE) {
-      damagePlayer.call(scene, scene.player, enemy);
-    }
-  };
-
-  const onUpdate = (anim, frame) => {
-    if (!anim || anim.key !== 'enemyAttack' || released) return;
-    if (frame.index < releaseAt) return;
-    doRelease();
-  };
-
-  enemy.on('animationupdate-enemyAttack', onUpdate);
   enemy.once('animationcomplete-enemyAttack', () => {
-    enemy.off('animationupdate-enemyAttack', onUpdate);
-    if (!released) {
-      doRelease();
-    }
     if (enemy.active) {
       enemy.setData('aiState', 'chase');
       enemy.setData('nextAttackAt', scene.time.now + ENEMY_ATTACK_COOLDOWN_MS);

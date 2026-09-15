@@ -6,6 +6,11 @@ export const ENEMY_JUMP_VELOCITY = -350;
 export const ENEMY_JUMP_DELAY_MS = 650;
 export const INVULNERABILITY_MS = 1800;
 
+// Extra downward gravity applied only while a body is actually falling
+// (velocity.y > 0), on top of the world gravity set in main.js — makes
+// landings snappier without touching jump height/reach (rise is untouched).
+export const FALL_GRAVITY_BOOST = 200;
+
 // Combat stats: hit points and per-hit power, replacing the old
 // touch-equals-instant-kill model on both sides.
 export const ENEMY_HP = 2;

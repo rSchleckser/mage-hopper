@@ -18,7 +18,11 @@ export const ENEMY_CONTACT_DAMAGE = 1;
 
 // Enemy attack: how close an enemy needs to be to swing (vertical check
 // reuses MELEE_HEIGHT_TOLERANCE below) and the cooldown between swings.
-export const ENEMY_ATTACK_RANGE = 70;
+// Measured center-to-center (see enemy-ai.js), so this must clear the
+// characters' own collision-box width (~83px at the current scale/ratios) —
+// otherwise two touching bodies are already farther apart than the range and
+// the enemy can push the player around without ever being able to swing.
+export const ENEMY_ATTACK_RANGE = 100;
 export const ENEMY_ATTACK_COOLDOWN_MS = 1200;
 
 // Melee reach (Rogue): a rectangle extending in front of the player, swept

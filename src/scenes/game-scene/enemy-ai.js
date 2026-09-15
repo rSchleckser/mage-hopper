@@ -101,13 +101,17 @@ export function enemyFollows(enemy, scene) {
   }
 
   // Close enough (and off cooldown) to swing instead of continuing to chase.
+  // Uses sprite-center x/y (not body.x/body.y — those are the collision
+  // box's left/top edge, and applyFacingHitbox gives that edge a
+  // facing-dependent offset, so a raw body.x diff doesn't track true
+  // proximity and could stay outside ENEMY_ATTACK_RANGE even at point-blank
+  // contact). Matches the center-based check beginEnemyAttack itself uses.
   const nextAttackAt = enemy.getData('nextAttackAt') || 0;
   const inAttackRange =
-    Math.abs(player.body.x - enemy.body.x) <= ENEMY_ATTACK_RANGE &&
-    Math.abs(player.body.y - enemy.body.y) <= MELEE_HEIGHT_TOLERANCE;
+    Math.abs(player.x - enemy.x) <= ENEMY_ATTACK_RANGE && Math.abs(player.y - enemy.y) <= MELEE_HEIGHT_TOLERANCE;
   if (inAttackRange && enemy.body.touching.down && scene.time.now >= nextAttackAt) {
-    enemy.setFlipX(player.body.x < enemy.body.x);
-    applyFacingHitbox(enemy, player.body.x < enemy.body.x);
+    enemy.setFlipX(player.x < enemy.x);
+    applyFacingHitbox(enemy, player.x < enemy.x);
     beginEnemyAttack(enemy, scene);
     return;
   }

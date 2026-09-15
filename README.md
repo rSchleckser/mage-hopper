@@ -1,25 +1,39 @@
 # Mage Hopper
 
-Mage Hopper is a platformer where you hop across floating platforms as a fire mage, blast knights with FIRE bolts and staff SLAM waves, collect the key on each stage, and reach the door before you run out of lives. Clear all 5 levels to win. Playable on desktop and mobile.
+Mage Hopper is a platformer where you pick a hero, hop across floating platforms, take down knights, and race to the key and door on each stage before you run out of lives. Clear all 5 levels to win. Playable on desktop and mobile.
 
 **Play the game [here](https://rschleckser.github.io/mage-hopper/)**
 
-## Instructions
+![Gameplay Screenshot](./img/GamePlay.png)
 
-1. **Start Game**: Click "Start Game" on the main menu to begin, or "Instructions" for an in-game walkthrough of controls, objective, and tips.
+## Features
+
+- **3 playable heroes**, each with a different feel:
+  - **Mage** — Ranged fire magic. Fragile, but hits from anywhere on screen.
+  - **Rogue** — Close-quarters blades. Faster than the others, has to close the distance.
+  - **Knight** — Slow, tough, hits hard. Starts with more lives and HP than the others.
+- **5 hand-built levels**, growing more demanding as you go — the later stages add moving platforms (oscillating and conveyor-style) on top of the standard jump-and-climb layouts.
+- **HP + lives combat** on both sides: enemies take multiple hits to go down, and you only lose a life once your HP for that life runs out — contact alone doesn't hurt you, only a landed enemy swing does, followed by a brief invulnerability window.
+- **Mobile-first UI**: the main menu, character select, pause menu, and end screens all switch to full-viewport layouts on phones instead of shrinking the desktop layout down.
+
+## How to Play
+
+1. **Choose your hero** on the Character Select screen, then **Start Adventure**.
 2. **Controls**:
-   - Move Left: `Left Arrow` or `A`
-   - Move Right: `Right Arrow` or `D`
-   - Jump: `Up Arrow` or `W`
-   - Fire: `F` — shoots a bolt straight ahead
-   - Slam: `E` — a stronger staff-swing wave attack
-   - On mobile/touch devices, on-screen JUMP / FIRE / SLAM buttons and a directional pad appear automatically.
-3. **Defeat Enemies**: Knights patrol the platforms and chase you — take them out with FIRE or SLAM before they touch you.
-4. **Collect the Key**: Find the key on each level, then reach the door to advance.
-5. **Avoid Damage**: Getting touched by an enemy costs a life (3 lives per run, with a brief invulnerability window after each hit).
-6. **Game Over**: Lose all your lives and it's game over — play again or return to the menu.
-7. **Level Win**: Reach the door with the key to advance to the next level (5 levels total).
-8. **Game Win**: Clear all 5 levels to win the game!
+
+   | Action | Keyboard | Touch |
+   | --- | --- | --- |
+   | Move | `←`/`→` or `A`/`D` | On-screen D-pad |
+   | Jump | `↑` or `W` | JUMP button |
+   | Attack | `F` | FIRE button |
+   | Extra Attack | `E` | SLAM button |
+   | Pause | `P` or `Esc` | Pause button |
+
+   Touch controls appear automatically on phones and tablets.
+3. **Fight knights**: they patrol the platforms and chase you down — attacks (not just bumping into them) are what cost you HP, and they take a few hits to defeat.
+4. **Collect the key**, then reach the door to clear the stage and move to the next level.
+5. **Watch your HP and lives**: each hero has their own starting HP and life count (the Knight is the tankiest). Run out of lives and it's game over — play again or return to the menu.
+6. **Clear all 5 levels** to win the game.
 
 ## Screenshots
 
@@ -27,9 +41,9 @@ Mage Hopper is a platformer where you hop across floating platforms as a fire ma
 
 ![Main Menu Screenshot](./img/Main_Menu.png)
 
-### Gameplay
+### Character Select
 
-![Gameplay Screenshot](./img/GamePlay.png)
+![Character Select Screenshot](./img/CharacterSelect.png)
 
 ### In-Game Instructions
 
@@ -40,8 +54,8 @@ Mage Hopper is a platformer where you hop across floating platforms as a fire ma
 ## Technologies Used
 
 - HTML5 / CSS3
-- JavaScript (ES Modules — no build step or bundler required)
-- [Phaser 3](https://phaser.io/) game framework
+- JavaScript (ES Modules — no build step, bundler, or `npm install` required)
+- [Phaser 3](https://phaser.io/) game framework (pinned to 3.80.0 via CDN in `index.html`)
 
 ## Project Structure
 
@@ -49,22 +63,56 @@ The game logic lives under `src/`, organized by responsibility:
 
 ```
 src/
-  entities/       Projectile and slam-wave sprite classes + pools
-  ui/             Reusable pill-button UI kit and DOM overlay helpers
-  scenes/         Menu, Game Over, Level Win, Game Win scenes
-  scenes/game-scene/  Animations, player state machine, enemy AI, combat
-  levels.js       Per-level key/door spawn points and platform layout
-  game-state.js   Shared run state (lives, level, key collected)
-  constants.js    Gameplay tuning values (speeds, hitboxes, etc.)
-  input.js        Touch/mobile control handling
-  main.js         Phaser config and game bootstrap
+  main.js                 Phaser config and game bootstrap
+  characters.js           Per-character stats, animations, and asset config
+  character-select.js     Selected-character state (persists across scenes)
+  game-state.js           Shared run state (lives, HP, level, key collected)
+  constants.js            Gameplay tuning values (speeds, hitboxes, timers)
+  levels.js               Per-level platforms, moving platforms, key/door spawns
+  input.js                Touch/mobile control handling
+  audio.js                Sound effects + mute state
+  rotate-hint.js          Landscape-orientation nudge + canvas scale handling
+  entities/               Projectile and slam-wave sprite classes + pools
+  utils/hitbox.js         Shared facing-direction hitbox helper
+  ui/                     Pill-button UI kit, theme colors, and per-screen DOM
+                          overlays (menu, character select, pause, game over,
+                          level/game win, instructions) used on mobile
+  scenes/
+    menu-scene.js             Main menu
+    character-select-scene.js Hero picker
+    pause-scene.js            Pause menu
+    game-over-scene.js        Game over screen
+    level-win-scene.js        Between-level screen
+    game-win-scene.js         Victory screen
+    game-scene/                The level itself:
+      index.js                   Scene setup, world/collider wiring
+      player-controller.js       Player input + state machine
+      enemy-ai.js                Enemy chase/attack behavior
+      combat.js                  Damage, key/door, death handling
+      animations.js              Animation definitions per character
+      hud.js                     Level/lives badges + HP bar
 ```
 
-`index.html` loads `src/main.js` directly as an ES module — just open it through a local static server (no `npm install` or build required).
+`index.html` loads `src/main.js` directly as an ES module — see **Development** below for how to run it locally.
+
+## Development
+
+No `npm install` or build step — this is plain HTML/CSS/JS. To run it locally, serve the folder with any static file server (opening `index.html` directly via `file://` won't work, since ES modules require a real HTTP origin):
+
+```bash
+python3 -m http.server 8000
+# then open http://localhost:8000
+```
+
+While playing, press the backtick key (`` ` ``) to toggle a debug overlay showing player/enemy speed and Arcade Physics collision boxes — useful when tuning movement or level layouts.
 
 ## Credits
 
-- Created by Richard Schleckser
+- **Code**: Richard Schleckser
+- **Character sprites** (Mage, Rogue, Knight): a free character pack from [CraftPix](https://craftpix.net/)
+- **Background artwork**: [Freepik](https://www.freepik.com/) (Freepik Company S.L.)
+- **Sound effects**: rendered with [sfxr.me](https://sfxr.me/) (public domain / Unlicense)
 
+## License
 
-
+The game's original code (this repo's HTML, CSS, and JavaScript) is licensed under the [MIT License](./LICENSE). Third-party art and audio keep their own sources/licenses as listed under Credits above.

@@ -3,6 +3,7 @@ import { PLAYER_JUMP_VELOCITY, MELEE_REACH, MELEE_EXTRA_REACH, MELEE_HEIGHT_TOLE
 import { touchInput } from '../../input.js';
 import { playJump, playFire, playSlam } from '../../audio.js';
 import { meleeHitEnemiesInFront } from './combat.js';
+import { gameState } from '../../game-state.js';
 
 // The bolt/wave release point is timed as a fraction of the swing animation's
 // total frame count, so it scales correctly whether a character's attack
@@ -82,7 +83,7 @@ function handleJumpingState(scene, input) {
     // A fresh jump grants a new air attack and double jump, independent of the last one.
     scene.airAttackUsed = false;
     scene.doubleJumpUsed = false;
-  } else if (input.upJustPressed && !player.body.touching.down && !scene.doubleJumpUsed) {
+  } else if (gameState.doubleJumpUnlocked && input.upJustPressed && !player.body.touching.down && !scene.doubleJumpUsed) {
     player.setVelocityY(PLAYER_JUMP_VELOCITY);
     player.anims.play('doubleJump', true);
     playJump();
@@ -114,7 +115,7 @@ function handleJumpingState(scene, input) {
 
 function handleFallingState(scene, input) {
   const { player } = scene;
-  if (input.upJustPressed && !player.body.touching.down && !scene.doubleJumpUsed) {
+  if (gameState.doubleJumpUnlocked && input.upJustPressed && !player.body.touching.down && !scene.doubleJumpUsed) {
     player.setVelocityY(PLAYER_JUMP_VELOCITY);
     player.anims.play('doubleJump', true);
     playJump();

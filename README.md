@@ -109,7 +109,7 @@ While playing, press the backtick key (`` ` ``) to toggle a debug overlay showin
 ## Credits
 
 - **Code**: Richard Schleckser
-- **Character sprites** (Mage, Rogue, Knight): a free character pack from [CraftPix](https://craftpix.net/)
+- **Character sprites** (Mage, Rogue, Knight): [Assassin, Mage, Viking - Free Pixel Art Game Heroes](https://craftpix.net/freebies/assassin-mage-viking-free-pixel-art-game-heroes/) by CraftPix
 - **Background artwork**: [Freepik](https://www.freepik.com/) (Freepik Company S.L.)
 - **Sound effects**: rendered with [sfxr.me](https://sfxr.me/) (public domain / Unlicense)
 

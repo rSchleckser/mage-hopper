@@ -11,16 +11,8 @@ import { ProjectileGroup } from '../../entities/projectile.js';
 import { SlamWaveGroup } from '../../entities/slam-wave.js';
 import { getLevelConfig, buildPlatforms, ENEMY_SPAWNS } from '../../levels.js';
 import { createAnimations } from './animations.js';
-import { enemyFollows } from './enemy-ai.js';
-import {
-  hitEnemyWithFire,
-  hitEnemyWithSlamWave,
-  slamWaveCanHit,
-  createEnemyCanHurtPlayer,
-  damagePlayer,
-  collectKey,
-  enterDoor,
-} from './combat.js';
+import { enemyFollows, createEnemyHealthBar } from './enemy-ai.js';
+import { hitEnemyWithFire, hitEnemyWithSlamWave, slamWaveCanHit, collectKey, enterDoor } from './combat.js';
 import { updatePlayer } from './player-controller.js';
 
 function recycleOffscreen(bolt) {
@@ -89,6 +81,11 @@ export const gameScene = {
     for (let i = 1; i <= 7; i++) this.load.image('enemyJump' + i, './Knight/Jump/jump' + i + '.png');
     // Load enemy death frames
     for (let i = 1; i <= 10; i++) this.load.image('enemyDeath' + i, './Knight/Death/death' + i + '.png');
+    // Load enemy attack frames (0-indexed on disk, same convention as the
+    // playable Knight's own Attack folder in characters.js)
+    for (let i = 0; i <= 4; i++) this.load.image('enemyAttack' + (i + 1), './Knight/Attack/attack' + i + '.png');
+    // Load enemy hurt frames
+    for (let i = 1; i <= 4; i++) this.load.image('enemyHurt' + i, './Knight/Hurt/hurt' + i + '.png');
 
     // Selected playable character's body + animation frames (Mage or Rogue)
     this.character = getCharacter(getSelectedCharacterId());
@@ -158,6 +155,9 @@ export const gameScene = {
       enemy.setCollideWorldBounds(true);
       applyFacingHitbox(enemy, false);
       enemy.setData('hp', ENEMY_HP);
+      enemy.setData('aiState', 'chase');
+      enemy.setData('nextAttackAt', 0);
+      createEnemyHealthBar(this, enemy);
       return enemy;
     });
 
@@ -165,13 +165,13 @@ export const gameScene = {
     this.fireballs = new ProjectileGroup(this);
     this.slamWaves = new SlamWaveGroup(this);
 
-    const enemyCanHurtPlayer = createEnemyCanHurtPlayer(this);
     this.enemies.forEach((enemy) => {
       this.physics.add.collider(enemy, this.platforms);
       this.physics.add.overlap(this.fireballs, enemy, hitEnemyWithFire, null, this);
       this.physics.add.overlap(this.slamWaves, enemy, hitEnemyWithSlamWave, slamWaveCanHit, this);
-      // Player takes damage and respawns on contact, unless mid-attack
-      this.physics.add.collider(this.player, enemy, damagePlayer, enemyCanHurtPlayer, this);
+      // Physical blocking only — damage now comes solely from a landed enemy
+      // attack swing (enemy-ai.js's beginEnemyAttack), not mere contact.
+      this.physics.add.collider(this.player, enemy);
     });
 
     this.physics.add.collider(this.player, this.platforms);
@@ -186,6 +186,7 @@ export const gameScene = {
     this.isExitingLevel = false;
     this.invulnerableUntil = 0;
     this.playerState = 'idle';
+    this.airAttackUsed = false;
 
     createAnimations(this, this.character);
 

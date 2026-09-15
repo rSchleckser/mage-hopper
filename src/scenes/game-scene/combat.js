@@ -1,7 +1,7 @@
 import { gameState } from '../../game-state.js';
 import { setMobileControlsVisible } from '../../input.js';
 import { applyFacingHitbox } from '../../utils/hitbox.js';
-import { INVULNERABILITY_MS, ENEMY_HP, ENEMY_CONTACT_DAMAGE, ENEMY_HIT_FLASH_MS } from '../../constants.js';
+import { INVULNERABILITY_MS, ENEMY_HP, ENEMY_CONTACT_DAMAGE } from '../../constants.js';
 import { playEnemyDefeat, playHurt, playKeyCollect } from '../../audio.js';
 
 // Death frames render on a canvas twice the size of every other Knight
@@ -46,6 +46,10 @@ function killEnemy(enemyHit) {
   enemyHit.anims.stop();
   enemyHit.setActive(false);
   enemyHit.setVisible(false);
+  if (enemyHit.hpBar) {
+    enemyHit.hpBar.destroy();
+    enemyHit.hpBar = null;
+  }
 
   playEnemyDefeat();
 
@@ -88,8 +92,10 @@ function killEnemy(enemyHit) {
 // Applies `power` points of damage to an enemy, killing it once its HP is
 // brought to 0. Enemy HP is stored on the sprite itself (set at spawn time in
 // index.js) so multiple partial hits accumulate correctly across separate
-// attacks. A hit that doesn't kill gets a brief red tint flash instead of a
-// new animation — enemies have no dedicated "hurt" frames to play.
+// attacks. A hit that doesn't kill plays the enemy's `enemyHurt` animation in
+// place; `enemyFollows` (enemy-ai.js) checks the `aiState` flag set here and
+// skips normal movement/AI until the reaction finishes, so the run anim
+// doesn't instantly overwrite it on the next frame.
 export function damageEnemy(enemyHit, power) {
   if (!enemyHit || !enemyHit.active || enemyHit.getData('defeated')) {
     return;
@@ -100,9 +106,11 @@ export function damageEnemy(enemyHit, power) {
     killEnemy(enemyHit);
     return;
   }
-  enemyHit.setTintFill(0xff4444);
-  enemyHit.scene.time.delayedCall(ENEMY_HIT_FLASH_MS, () => {
-    if (enemyHit.active) enemyHit.clearTint();
+  enemyHit.setData('aiState', 'hurt');
+  enemyHit.setVelocity(0, 0);
+  enemyHit.anims.play('enemyHurt', true);
+  enemyHit.once('animationcomplete-enemyHurt', () => {
+    if (enemyHit.active) enemyHit.setData('aiState', 'chase');
   });
 }
 
@@ -184,22 +192,10 @@ export function slamWaveCanHit(enemyHit, wave) {
   );
 }
 
-export function createEnemyCanHurtPlayer(scene) {
-  return (playerObj, enemyObj) => {
-    if (!enemyObj || !enemyObj.active || !enemyObj.body || !enemyObj.body.enable || enemyObj.getData('defeated')) {
-      return false;
-    }
-    // While swinging FIRE / SLAM, knights cannot interrupt the attack
-    if (scene.playerState === 'attacking' || scene.playerState === 'attackExtra') {
-      return false;
-    }
-    return true;
-  };
-}
-
-// Player takes contact damage, respawning if it survives or dying if it's
-// out of both HP and lives. Registered as a Phaser collider callback with
-// the scene passed as its context, so `this` below refers to the scene.
+// Player takes damage from a landed enemy attack (see enemy-ai.js's
+// beginEnemyAttack), respawning in place if it survives or dying if it's out
+// of both HP and lives. Called directly with the scene as `this` context
+// (not a Phaser collider callback — contact alone no longer deals damage).
 export function damagePlayer(player, enemyHit) {
   if (!enemyHit || !enemyHit.active || enemyHit.getData('defeated')) {
     return;
@@ -238,17 +234,34 @@ export function damagePlayer(player, enemyHit) {
     this.playerState = 'hurt';
     player.anims.play('hurt', true);
     player.once('animationcomplete-hurt', () => {
-      player.enableBody(true, Math.floor(Math.random() * 1700), 800, true, true);
+      // Re-enable in place — no teleport. The hurt animation itself is the
+      // damage indicator now (paired with the HP HUD ticking down), not a
+      // random respawn across the level.
+      player.enableBody(true, player.x, player.y, true, true);
       player.setBounce(0.1);
       player.setCollideWorldBounds(true);
-      player.setAlpha(0.5);
-      applyFacingHitbox(player, false);
+      applyFacingHitbox(player, player.flipX);
       this.playerState = 'idle';
-      this.time.delayedCall(1500, () => {
+    });
+    // Brief flicker for the remaining invulnerability window — a lighter,
+    // untethered replacement for the old teleport-then-fade cue. The final
+    // reset fires one full flicker interval after the last possible toggle
+    // so it always wins the tie instead of racing it.
+    const FLICKER_INTERVAL_MS = 120;
+    const flickerEvent = this.time.addEvent({
+      delay: FLICKER_INTERVAL_MS,
+      repeat: Math.max(Math.floor(INVULNERABILITY_MS / FLICKER_INTERVAL_MS) - 1, 0),
+      callback: () => {
         if (player && player.active) {
-          player.setAlpha(1);
+          player.setAlpha(player.alpha === 1 ? 0.4 : 1);
         }
-      });
+      },
+    });
+    this.time.delayedCall(INVULNERABILITY_MS + FLICKER_INTERVAL_MS, () => {
+      flickerEvent.remove();
+      if (player && player.active) {
+        player.setAlpha(1);
+      }
     });
   } else {
     this.playerState = 'dying';

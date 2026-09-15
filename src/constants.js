@@ -10,7 +10,11 @@ export const INVULNERABILITY_MS = 1800;
 // touch-equals-instant-kill model on both sides.
 export const ENEMY_HP = 2;
 export const ENEMY_CONTACT_DAMAGE = 1;
-export const ENEMY_HIT_FLASH_MS = 120;
+
+// Enemy attack: how close an enemy needs to be to swing (vertical check
+// reuses MELEE_HEIGHT_TOLERANCE below) and the cooldown between swings.
+export const ENEMY_ATTACK_RANGE = 70;
+export const ENEMY_ATTACK_COOLDOWN_MS = 1200;
 
 // Melee reach (Rogue): a rectangle extending in front of the player, swept
 // against enemies on attack release.

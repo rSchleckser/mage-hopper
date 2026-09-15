@@ -37,6 +37,12 @@ export function createAnimations(scene, character) {
   const enemyJumpFrames = [];
   for (let i = 1; i <= 7; i++) enemyJumpFrames.push({ key: 'enemyJump' + i });
 
+  const enemyAttackFrames = [];
+  for (let i = 1; i <= 5; i++) enemyAttackFrames.push({ key: 'enemyAttack' + i });
+
+  const enemyHurtFrames = [];
+  for (let i = 1; i <= 4; i++) enemyHurtFrames.push({ key: 'enemyHurt' + i });
+
   // Jump/fall are carved from the character's jump spritesheet (7 frames:
   // rise, apex, fall, land) — same layout convention for every character.
   const jumpFrames = jumpAllFrames.slice(0, 3);
@@ -95,4 +101,7 @@ export function createAnimations(scene, character) {
   const enemyDeathFrames = [];
   for (let i = 1; i <= 10; i++) enemyDeathFrames.push({ key: 'enemyDeath' + i });
   defineAnim(scene, { key: 'enemyDeath', frames: enemyDeathFrames, frameRate: 10, repeat: 0 });
+
+  defineAnim(scene, { key: 'enemyAttack', frames: enemyAttackFrames, frameRate: 10, repeat: 0 });
+  defineAnim(scene, { key: 'enemyHurt', frames: enemyHurtFrames, frameRate: 10, repeat: 0 });
 }

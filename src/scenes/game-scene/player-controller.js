@@ -79,6 +79,8 @@ function handleJumpingState(scene, input) {
     player.setVelocityY(PLAYER_JUMP_VELOCITY);
     player.anims.play('jump', true);
     playJump();
+    // A fresh jump grants a new air attack, independent of the last one.
+    scene.airAttackUsed = false;
   }
 
   if (input.left) {
@@ -95,6 +97,13 @@ function handleJumpingState(scene, input) {
   if (!player.body.touching.down && player.body.velocity.y === 0) {
     player.anims.play('peak', true);
   }
+
+  // Experimental: one attack per jump while airborne, reusing the exact
+  // same attack states/handlers as grounded attacks.
+  if (!scene.airAttackUsed && (input.attack || input.extra)) {
+    scene.airAttackUsed = true;
+    scene.playerState = input.extra ? 'attackExtra' : 'attacking';
+  }
 }
 
 function handleFallingState(scene, input) {
@@ -110,6 +119,9 @@ function handleFallingState(scene, input) {
     scene.playerState = 'running';
   } else if (player.body.touching.down) {
     scene.playerState = 'idle';
+  } else if (!scene.airAttackUsed && (input.attack || input.extra)) {
+    scene.airAttackUsed = true;
+    scene.playerState = input.extra ? 'attackExtra' : 'attacking';
   }
 }
 
@@ -161,7 +173,9 @@ function handleAttackingState(scene) {
       if (!released) {
         doRelease();
       }
-      scene.playerState = 'idle';
+      // A mid-air attack can finish its swing before landing — resume
+      // falling instead of snapping into a grounded idle pose.
+      scene.playerState = player.body.touching.down ? 'idle' : 'falling';
     });
   }
 }
@@ -215,7 +229,7 @@ function handleAttackExtraState(scene) {
       if (!released) {
         doRelease();
       }
-      scene.playerState = 'idle';
+      scene.playerState = player.body.touching.down ? 'idle' : 'falling';
     });
   }
 }

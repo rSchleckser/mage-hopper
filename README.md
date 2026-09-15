@@ -1,110 +1,89 @@
 # Mage Hopper
 
-Mage Hopper is a platformer where you pick a hero, hop across floating platforms, take down knights, and race to the key and door on each stage before you run out of lives. Clear all 5 levels to win. Playable on desktop and mobile.
+Browser platformer built with [Phaser 3](https://phaser.io/). Pick a hero, clear 5 hand-built levels, collect the key, reach the door.
 
-**Play the game [here](https://rschleckser.github.io/mage-hopper/)**
+**[Play it](https://rschleckser.github.io/mage-hopper/)** · desktop and mobile.
+
+I built the playable MVP by hand — movement, combat, levels, scenes — then used Claude on a branch to help refactor toward per-character/per-level modules, a mobile-first UI, and sound. The game loop and level design are mine; AI was used for structure and polish, reviewed and re-tuned before anything merged.
 
 ![Gameplay Screenshot](./img/GamePlay.png)
 
 ## Features
 
-- **3 playable heroes**, each with a different feel:
-  - **Mage** — Ranged fire magic. Fragile, but hits from anywhere on screen.
-  - **Rogue** — Close-quarters blades. Faster than the others, has to close the distance.
-  - **Knight** — Slow, tough, hits hard. Starts with more lives and HP than the others.
-- **5 hand-built levels**, growing more demanding as you go — the later stages add moving platforms (oscillating and conveyor-style) on top of the standard jump-and-climb layouts.
-- **HP + lives combat** on both sides: enemies take multiple hits to go down, and you only lose a life once your HP for that life runs out — contact alone doesn't hurt you, only a landed enemy swing does, followed by a brief invulnerability window.
-- **Mobile-first UI**: the main menu, character select, pause menu, and end screens all switch to full-viewport layouts on phones instead of shrinking the desktop layout down.
+- **3 heroes, different combat feel**: **Mage** (ranged fire, fragile), **Rogue** (fast melee), **Knight** (slow tank, extra HP/lives)
+- **5 levels**; later stages add oscillating and conveyor-belt moving platforms on top of standard jump-and-climb layouts
+- **HP per life + lives**, both sides. Contact alone doesn't hurt you — only a landed enemy attack does, then a brief invulnerability window
+- **Mobile-first UI**: menu, character select, pause, and end screens are real full-viewport layouts on phones, not a shrunk-down desktop canvas
 
-## How to Play
+## Controls
 
-1. **Choose your hero** on the Character Select screen, then **Start Adventure**.
-2. **Controls**:
+| Action | Keyboard | Touch |
+| --- | --- | --- |
+| Move | `←`/`→` or `A`/`D` | D-pad |
+| Jump | `↑` or `W` | JUMP |
+| Attack | `F` | FIRE |
+| Extra Attack | `E` | SLAM |
+| Pause | `P` or `Esc` | Pause |
 
-   | Action | Keyboard | Touch |
-   | --- | --- | --- |
-   | Move | `←`/`→` or `A`/`D` | On-screen D-pad |
-   | Jump | `↑` or `W` | JUMP button |
-   | Attack | `F` | FIRE button |
-   | Extra Attack | `E` | SLAM button |
-   | Pause | `P` or `Esc` | Pause button |
-
-   Touch controls appear automatically on phones and tablets.
-3. **Fight knights**: they patrol the platforms and chase you down — attacks (not just bumping into them) are what cost you HP, and they take a few hits to defeat.
-4. **Collect the key**, then reach the door to clear the stage and move to the next level.
-5. **Watch your HP and lives**: each hero has their own starting HP and life count (the Knight is the tankiest). Run out of lives and it's game over — play again or return to the menu.
-6. **Clear all 5 levels** to win the game.
+Touch controls appear automatically on phones and tablets.
 
 ## Screenshots
 
-### Main Menu
+<p>
+  <img src="./img/Main_Menu.png" alt="Main Menu" width="49%">
+  <img src="./img/CharacterSelect.png" alt="Character Select" width="49%">
+</p>
 
-![Main Menu Screenshot](./img/Main_Menu.png)
+## Stack
 
-### Character Select
+HTML/CSS, JavaScript ES modules, Phaser 3.80.0 via CDN. No bundler, no `npm install`.
 
-![Character Select Screenshot](./img/CharacterSelect.png)
-
-### In-Game Instructions
-
-![Game Instructions - Controls](./img/instructions_page_1.png)
-![Game Instructions - Quest](./img/instructions_page_2.png)
-![Game Instructions - Tips](./img/instructions_page_3.png)
-
-## Technologies Used
-
-- HTML5 / CSS3
-- JavaScript (ES Modules — no build step, bundler, or `npm install` required)
-- [Phaser 3](https://phaser.io/) game framework (pinned to 3.80.0 via CDN in `index.html`)
-
-## Project Structure
-
-The game logic lives under `src/`, organized by responsibility:
+## How it's put together
 
 ```
 src/
-  main.js                 Phaser config and game bootstrap
-  characters.js           Per-character stats, animations, and asset config
-  character-select.js     Selected-character state (persists across scenes)
-  game-state.js           Shared run state (lives, HP, level, key collected)
-  constants.js            Gameplay tuning values (speeds, hitboxes, timers)
-  levels.js               Per-level platforms, moving platforms, key/door spawns
-  input.js                Touch/mobile control handling
-  audio.js                Sound effects + mute state
-  rotate-hint.js          Landscape-orientation nudge + canvas scale handling
-  entities/               Projectile and slam-wave sprite classes + pools
-  utils/hitbox.js         Shared facing-direction hitbox helper
-  ui/                     Pill-button UI kit, theme colors, and per-screen DOM
-                          overlays (menu, character select, pause, game over,
-                          level/game win, instructions) used on mobile
-  scenes/
-    menu-scene.js             Main menu
-    character-select-scene.js Hero picker
-    pause-scene.js            Pause menu
-    game-over-scene.js        Game over screen
-    level-win-scene.js        Between-level screen
-    game-win-scene.js         Victory screen
-    game-scene/                The level itself:
-      index.js                   Scene setup, world/collider wiring
-      player-controller.js       Player input + state machine
-      enemy-ai.js                Enemy chase/attack behavior
-      combat.js                  Damage, key/door, death handling
-      animations.js              Animation definitions per character
-      hud.js                     Level/lives badges + HP bar
+  main.js               Phaser bootstrap
+  characters.js         Stats, anims, assets per hero
+  game-state.js         Lives, HP, level, key
+  levels.js             Platforms, movers, key/door
+  entities/             Projectile + slam-wave pools
+  scenes/game-scene/    Player state machine, enemy AI, combat, HUD
+  ui/                   Mobile DOM overlays (sit on top of the canvas)
 ```
 
-`index.html` loads `src/main.js` directly as an ES module — see **Development** below for how to run it locally.
+Design choices worth asking about:
 
-## Development
+- **No build step** — ES modules served straight from a static host (GitHub Pages). Tradeoff: no bundling/tree-shaking; gain: one folder, one server command.
+- **Mobile UI is DOM, not Phaser canvas text** — Phaser's Scale.FIT letterboxes the canvas down to a thin strip on narrow/portrait phones, which shrank canvas-drawn buttons and text to the point of being unusable. `shouldUseDomOverlay()` swaps the menu, character select, pause, and end screens to full-viewport DOM overlays instead of scaling the desktop layout down.
+- **Object pools** for fire bolts and slam waves (`entities/`) so attacking doesn't allocate a new sprite every shot.
+- **Shared `game-state`** so lives/HP/level survive scene swaps (menu → character select → game → level-win → next level).
+- **Debug overlay**: press `` ` `` in-game for player/enemy speed readouts and Arcade Physics collision boxes.
 
-No `npm install` or build step — this is plain HTML/CSS/JS. To run it locally, serve the folder with any static file server (opening `index.html` directly via `file://` won't work, since ES modules require a real HTTP origin):
+## AI workflow
+
+1. Hand-built the MVP first — player movement, combat, and the original levels — until the game was playable start to finish.
+2. Used Claude on a feature branch to split the monolithic scene code into per-character/per-level modules, build the mobile DOM UI, and add sound.
+3. Reviewed and re-tuned before merging. Concrete example: an early refactor replaced how losing a life *looked* — Claude changed all damage reactions to an in-place hurt animation, including life loss, which used to teleport the player to a random spot and fade back in. Playing it, the life-loss case had lost its impact. I pointed at the exact prior commit and line with the original respawn code and had it restored for that case specifically, keeping the new in-place reaction for ordinary HP chip damage ([`5b0b362`](https://github.com/rSchleckser/mage-hopper/commit/5b0b3622b363bdbc06a906b7705734cffbba4a46)).
+4. I still own level layout and combat feel — where a refactor changed jump timing, hit ranges, or damage feedback, I played it and put back what didn't feel right.
+
+## Run locally
+
+ES modules need a real HTTP origin, not `file://`:
 
 ```bash
 python3 -m http.server 8000
-# then open http://localhost:8000
+# http://localhost:8000
 ```
 
-While playing, press the backtick key (`` ` ``) to toggle a debug overlay showing player/enemy speed and Arcade Physics collision boxes — useful when tuning movement or level layouts.
+## Status
+
+Playable end-to-end on desktop and phone: 5 levels, 3 heroes, mute, pause, and win/lose flows all work.
+
+**Known limitations:**
+- Enemy AI is one generic chase/attack behavior reused across every level — level design varies platform layout and enemy *placement*, not enemy *behavior*.
+- Mobile menu sizing is sensitive to the browser's own chrome (address bar show/hide) on some devices.
+- Double jump is fully implemented but gated behind an unlock flag, off by default, while I decide how to surface it as a real unlockable instead of just shipping it live.
+- The in-game Instructions overlay has a couple of stale spots: it shows a "SPACE" hint for Jump (actually bound to Up/W only), and its wording is Mage-flavored ("FIRE or SLAM") even though Rogue and Knight fight melee.
 
 ## Credits
 
@@ -113,6 +92,4 @@ While playing, press the backtick key (`` ` ``) to toggle a debug overlay showin
 - **Background artwork**: [Freepik](https://www.freepik.com/) (Freepik Company S.L.)
 - **Sound effects**: rendered with [sfxr.me](https://sfxr.me/) (public domain / Unlicense)
 
-## License
-
-The game's original code (this repo's HTML, CSS, and JavaScript) is licensed under the [MIT License](./LICENSE). Third-party art and audio keep their own sources/licenses as listed under Credits above.
+Code is [MIT](./LICENSE). Art and audio keep their own listed sources/licenses.

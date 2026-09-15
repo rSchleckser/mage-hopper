@@ -9,7 +9,7 @@ import { getCharacter, frameFileIndices } from '../../characters.js';
 import { getSelectedCharacterId } from '../../character-select.js';
 import { ProjectileGroup } from '../../entities/projectile.js';
 import { SlamWaveGroup } from '../../entities/slam-wave.js';
-import { getLevelConfig, buildPlatforms, ENEMY_SPAWNS } from '../../levels.js';
+import { getLevelConfig, buildPlatforms, createMovingPlatforms, updateMovingPlatforms } from '../../levels.js';
 import { createAnimations } from './animations.js';
 import { enemyFollows, createEnemyHealthBar } from './enemy-ai.js';
 import { hitEnemyWithFire, hitEnemyWithSlamWave, slamWaveCanHit, collectKey, enterDoor } from './combat.js';
@@ -39,6 +39,16 @@ function recycleAllProjectiles(scene) {
 function applyFallBoost(body) {
   if (!body) return;
   body.gravity.y = body.velocity.y > 0 ? FALL_GRAVITY_BOOST : 0;
+}
+
+// Arcade physics doesn't automatically carry a resting body along with a
+// moving platform underneath it — only offset the rider while it's actually
+// standing on that platform (not merely touching a side).
+function carryOnMovingPlatform(rider, platform) {
+  if (rider.body.touching.down) {
+    rider.x += platform.body.deltaX();
+    rider.y += platform.body.deltaY();
+  }
 }
 
 // Texture keys are fixed strings ('player', 'run1', ...) reused across
@@ -138,17 +148,25 @@ export const gameScene = {
       { fontSize: '32px', fill: 'red' }
     );
 
-    // Key
+    // Key — placed at its exact authored resting position, not dropped and
+    // caught by gravity. The key/door collision boxes are much taller than
+    // the thin (10px) platforms, so a body starting anywhere near a
+    // platform's y already deeply pre-overlaps it — Arcade sometimes
+    // resolved that the wrong way (pushing the body down through the
+    // platform instead of resting it on top). Disabling gravity sidesteps
+    // that entirely: the authored coordinate is simply where it appears.
     this.key = this.physics.add.sprite(levelConfig.key.x, levelConfig.key.y, 'key').setScale(0.2);
-    this.key.setBounce(1.0);
+    this.key.body.allowGravity = false;
     this.key.body.setSize(this.key.width * 0.7, this.key.height * 1);
     this.key.body.setOffset(this.key.width * 0.15, this.key.height * 0.2);
 
-    // Door
+    // Door — same reasoning as the key above.
     this.door = this.physics.add.sprite(levelConfig.door.x, levelConfig.door.y, 'door').setScale(0.1);
+    this.door.body.allowGravity = false;
     this.door.body.setSize(this.door.width * 0.5, this.door.height * 0.9);
 
     this.platforms = buildPlatforms(this, levelConfig);
+    this.movingPlatforms = createMovingPlatforms(this, levelConfig);
 
     // Player
     this.player = this.physics.add.sprite(150, 800, 'player').setScale(1.5);
@@ -157,7 +175,7 @@ export const gameScene = {
     applyFacingHitbox(this.player, false);
 
     // Enemies
-    this.enemies = ENEMY_SPAWNS.map((spawn) => {
+    this.enemies = levelConfig.enemies.map((spawn) => {
       const enemy = this.physics.add.sprite(spawn.x, spawn.y, 'enemy').setScale(1.5);
       enemy.setCollideWorldBounds(true);
       applyFacingHitbox(enemy, false);
@@ -174,6 +192,7 @@ export const gameScene = {
 
     this.enemies.forEach((enemy) => {
       this.physics.add.collider(enemy, this.platforms);
+      this.physics.add.collider(enemy, this.movingPlatforms, carryOnMovingPlatform);
       this.physics.add.overlap(this.fireballs, enemy, hitEnemyWithFire, null, this);
       this.physics.add.overlap(this.slamWaves, enemy, hitEnemyWithSlamWave, slamWaveCanHit, this);
       // Physical blocking only — damage now comes solely from a landed enemy
@@ -182,6 +201,7 @@ export const gameScene = {
     });
 
     this.physics.add.collider(this.player, this.platforms);
+    this.physics.add.collider(this.player, this.movingPlatforms, carryOnMovingPlatform);
     this.physics.add.collider(this.key, this.platforms);
     this.physics.add.collider(this.door, this.platforms);
 
@@ -230,10 +250,11 @@ export const gameScene = {
   },
 
   update: function () {
-    // Gravity still acts on falling bodies regardless of playerState/aiState,
-    // so this runs unconditionally every frame, before the early-return below.
+    // Gravity/motion still act regardless of playerState/aiState, so these
+    // run unconditionally every frame, before the early-return below.
     applyFallBoost(this.player.body);
     this.enemies.forEach((enemy) => applyFallBoost(enemy.body));
+    updateMovingPlatforms(this.movingPlatforms);
 
     // Let hurt/death anims play without movement stealing control
     if (this.playerState === 'dying' || this.playerState === 'hurt') {

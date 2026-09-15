@@ -35,7 +35,8 @@ export class SlamWave extends Phaser.Physics.Arcade.Sprite {
     }
   }
 
-  launch(x, y, dir = 1) {
+  launch(x, y, dir = 1, power = 1) {
+    this.power = power;
     this.setActive(true);
     this.setVisible(true);
     this.setAlpha(1);

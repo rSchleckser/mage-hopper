@@ -16,6 +16,9 @@ export const CHARACTERS = {
     tagline: 'Ranged fire magic',
     moveSpeed: PLAYER_MOVE_SPEED,
     startingLives: 3,
+    maxHp: 2,
+    attackPower: 1,
+    attackExtraPower: 2,
     anims: {
       idle: { dir: 'Idle', prefix: 'idle', start: 1, count: 14 },
       run: { dir: 'Run', prefix: 'run', start: 1, count: 8 },
@@ -37,6 +40,9 @@ export const CHARACTERS = {
     // instead of hitting from anywhere on screen with ranged fire.
     moveSpeed: Math.round(PLAYER_MOVE_SPEED * 1.3),
     startingLives: 3,
+    maxHp: 2,
+    attackPower: 1,
+    attackExtraPower: 2,
     anims: {
       // idle11.png is missing from the pack — 17 frames numbered 1-10, 12-18.
       idle: { dir: 'Idle', prefix: 'idle', indices: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14, 15, 16, 17, 18] },
@@ -61,6 +67,9 @@ export const CHARACTERS = {
     startingLives: 4,
     meleeReach: MELEE_REACH + 20,
     meleeExtraReach: MELEE_EXTRA_REACH + 20,
+    maxHp: 3,
+    attackPower: 2,
+    attackExtraPower: 3,
     anims: {
       idle: { dir: 'Idle', prefix: 'idle', start: 1, count: 12 },
       run: { dir: 'Run', prefix: 'run', start: 1, count: 8 },

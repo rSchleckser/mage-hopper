@@ -6,7 +6,11 @@ import { shouldUseDomOverlay } from '../ui/dom-overlays.js';
 import { openGameOverDomOverlay, hideGameOverDomUi } from '../ui/game-over-overlay.js';
 import { playGameOver } from '../audio.js';
 import { getCharacter } from '../characters.js';
-import { getSelectedCharacterId, livesForSelectedCharacter } from '../character-select.js';
+import {
+  getSelectedCharacterId,
+  livesForSelectedCharacter,
+  maxHpForSelectedCharacter,
+} from '../character-select.js';
 
 export const gameOverScene = {
   key: 'GameOver',
@@ -27,11 +31,13 @@ export const gameOverScene = {
 
     const playAgain = () => {
       gameState.lives = livesForSelectedCharacter();
+      gameState.hp = maxHpForSelectedCharacter();
       gameState.level = 1;
       this.scene.start('Game');
     };
     const quitToMenu = () => {
       gameState.lives = livesForSelectedCharacter();
+      gameState.hp = maxHpForSelectedCharacter();
       gameState.level = 1;
       gameState.collectedKey = false;
       this.scene.start('Menu');

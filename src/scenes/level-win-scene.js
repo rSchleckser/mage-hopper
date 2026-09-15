@@ -1,5 +1,5 @@
 import { gameState } from '../game-state.js';
-import { livesForSelectedCharacter } from '../character-select.js';
+import { livesForSelectedCharacter, maxHpForSelectedCharacter } from '../character-select.js';
 import { setMobileControlsVisible } from '../input.js';
 import { makePillButton } from '../ui/menu-widgets.js';
 import { MENU_COLORS } from '../ui/theme.js';
@@ -28,6 +28,7 @@ export const levelWinScene = {
 
     const goToNextLevel = () => {
       gameState.lives = livesForSelectedCharacter();
+      gameState.hp = maxHpForSelectedCharacter();
       this.scene.start('Game');
     };
 

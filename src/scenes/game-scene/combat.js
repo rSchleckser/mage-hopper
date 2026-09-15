@@ -1,7 +1,7 @@
 import { gameState } from '../../game-state.js';
 import { setMobileControlsVisible } from '../../input.js';
 import { applyFacingHitbox } from '../../utils/hitbox.js';
-import { INVULNERABILITY_MS } from '../../constants.js';
+import { INVULNERABILITY_MS, ENEMY_HP, ENEMY_CONTACT_DAMAGE, ENEMY_HIT_FLASH_MS } from '../../constants.js';
 import { playEnemyDefeat, playHurt, playKeyCollect } from '../../audio.js';
 
 // Death frames render on a canvas twice the size of every other Knight
@@ -16,7 +16,10 @@ const DEATH_ORIGIN_X = 0.5;
 const DEATH_ORIGIN_Y = 0.63;
 const RUN_CONTENT_H = 54; // average opaque content height of the run pose
 
-export function defeatEnemy(enemyHit) {
+// Runs the enemy's actual death sequence (animation, sound, disable) once its
+// HP has been brought to 0 — see damageEnemy() below for the HP bookkeeping
+// that decides when to call this.
+function killEnemy(enemyHit) {
   if (!enemyHit || enemyHit.getData('defeated')) {
     return;
   }
@@ -82,6 +85,27 @@ export function defeatEnemy(enemyHit) {
   scene.time.delayedCall(2000, finish); // safety net if the anim never completes
 }
 
+// Applies `power` points of damage to an enemy, killing it once its HP is
+// brought to 0. Enemy HP is stored on the sprite itself (set at spawn time in
+// index.js) so multiple partial hits accumulate correctly across separate
+// attacks. A hit that doesn't kill gets a brief red tint flash instead of a
+// new animation — enemies have no dedicated "hurt" frames to play.
+export function damageEnemy(enemyHit, power) {
+  if (!enemyHit || !enemyHit.active || enemyHit.getData('defeated')) {
+    return;
+  }
+  const hp = (enemyHit.getData('hp') ?? ENEMY_HP) - power;
+  enemyHit.setData('hp', hp);
+  if (hp <= 0) {
+    killEnemy(enemyHit);
+    return;
+  }
+  enemyHit.setTintFill(0xff4444);
+  enemyHit.scene.time.delayedCall(ENEMY_HIT_FLASH_MS, () => {
+    if (enemyHit.active) enemyHit.clearTint();
+  });
+}
+
 // Registered via `physics.add.overlap(this.fireballs, enemy, ...)` — a Group
 // vs. single-Sprite pair. Phaser's collideSpriteVsGroup always normalizes
 // this to invoke the callback as (singleSprite, groupMember), i.e.
@@ -102,7 +126,7 @@ export function hitEnemyWithFire(enemyHit, projectile) {
     projectile.body.stop();
     projectile.body.enable = false;
   }
-  defeatEnemy(enemyHit);
+  damageEnemy(enemyHit, projectile.power);
 }
 
 // Same Group-vs-Sprite parameter order caveat as hitEnemyWithFire above —
@@ -115,7 +139,7 @@ export function hitEnemyWithSlamWave(enemyHit, wave) {
   if (wave.getData('impacting')) {
     return;
   }
-  defeatEnemy(enemyHit);
+  damageEnemy(enemyHit, wave.power);
   if (typeof wave.beginImpact === 'function') {
     wave.beginImpact();
   } else {
@@ -128,11 +152,11 @@ export function hitEnemyWithSlamWave(enemyHit, wave) {
   }
 }
 
-// Melee sweep: defeats any active enemy inside a rectangle extending
+// Melee sweep: damages any active enemy inside a rectangle extending
 // `reach` px in front of the player (per facing) and within `verticalTolerance`
-// px of the player's height. Used by Rogue's melee attacks in place of a
-// spawned projectile.
-export function meleeHitEnemiesInFront(scene, reach, verticalTolerance) {
+// px of the player's height. Used by Rogue/Knight's melee attacks in place of
+// a spawned projectile. Can hit multiple enemies in one sweep.
+export function meleeHitEnemiesInFront(scene, reach, verticalTolerance, power) {
   const player = scene.player;
   const facingLeft = player.flipX;
   const minX = facingLeft ? player.x - reach : player.x;
@@ -141,7 +165,7 @@ export function meleeHitEnemiesInFront(scene, reach, verticalTolerance) {
     if (!enemyHit.active || enemyHit.getData('defeated')) return;
     if (enemyHit.x < minX || enemyHit.x > maxX) return;
     if (Math.abs(enemyHit.y - player.y) > verticalTolerance) return;
-    defeatEnemy(enemyHit);
+    damageEnemy(enemyHit, power);
   });
 }
 
@@ -173,9 +197,10 @@ export function createEnemyCanHurtPlayer(scene) {
   };
 }
 
-// Player dies and respawns. Registered as a Phaser collider callback with the
-// scene passed as its context, so `this` below refers to the scene.
-export function playerDies(player, enemyHit) {
+// Player takes contact damage, respawning if it survives or dying if it's
+// out of both HP and lives. Registered as a Phaser collider callback with
+// the scene passed as its context, so `this` below refers to the scene.
+export function damagePlayer(player, enemyHit) {
   if (!enemyHit || !enemyHit.active || enemyHit.getData('defeated')) {
     return;
   }
@@ -194,9 +219,22 @@ export function playerDies(player, enemyHit) {
     player.body.enable = false;
   }
 
-  if (gameState.lives > 1) {
+  // HP absorbs hits within a life; a life is only spent once HP runs out,
+  // at which point HP resets for the next life (unless that was the last one).
+  gameState.hp -= ENEMY_CONTACT_DAMAGE;
+  const losingLife = gameState.hp <= 0;
+  const dying = losingLife && gameState.lives <= 1;
+
+  if (losingLife) {
     gameState.lives -= 1;
     this.lifeIndicator.setText(`Lives: ${gameState.lives}`);
+    if (!dying) {
+      gameState.hp = this.character.maxHp;
+    }
+  }
+  this.hpIndicator.setText(`HP: ${Math.max(gameState.hp, 0)}/${this.character.maxHp}`);
+
+  if (!dying) {
     this.playerState = 'hurt';
     player.anims.play('hurt', true);
     player.once('animationcomplete-hurt', () => {
@@ -213,8 +251,6 @@ export function playerDies(player, enemyHit) {
       });
     });
   } else {
-    gameState.lives -= 1;
-    this.lifeIndicator.setText(`Lives: ${gameState.lives}`);
     this.playerState = 'dying';
     setMobileControlsVisible(false);
     player.anims.play('death', true);

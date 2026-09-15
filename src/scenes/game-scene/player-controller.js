@@ -128,7 +128,12 @@ function handleAttackingState(scene) {
     const doRelease = () => {
       released = true;
       if (isMelee) {
-        meleeHitEnemiesInFront(scene, character.meleeReach ?? MELEE_REACH, MELEE_HEIGHT_TOLERANCE);
+        meleeHitEnemiesInFront(
+          scene,
+          character.meleeReach ?? MELEE_REACH,
+          MELEE_HEIGHT_TOLERANCE,
+          character.attackPower
+        );
         playFire();
         return;
       }
@@ -138,7 +143,7 @@ function handleAttackingState(scene) {
       const spawnY = player.y - 22;
       const bolt = scene.fireballs.getFirstDead(false);
       if (bolt) {
-        bolt.fire(spawnX, spawnY, facingLeft ? -1 : 1);
+        bolt.fire(spawnX, spawnY, facingLeft ? -1 : 1, character.attackPower);
         playFire();
       }
     };
@@ -179,7 +184,12 @@ function handleAttackExtraState(scene) {
       released = true;
       const facingLeft = player.flipX;
       if (isMelee) {
-        meleeHitEnemiesInFront(scene, character.meleeExtraReach ?? MELEE_EXTRA_REACH, MELEE_HEIGHT_TOLERANCE);
+        meleeHitEnemiesInFront(
+          scene,
+          character.meleeExtraReach ?? MELEE_EXTRA_REACH,
+          MELEE_HEIGHT_TOLERANCE,
+          character.attackExtraPower
+        );
         playSlam();
         return;
       }
@@ -188,7 +198,7 @@ function handleAttackExtraState(scene) {
       const spawnY = player.y - 18;
       const wave = scene.slamWaves.getFirstDead(false);
       if (wave) {
-        wave.launch(spawnX, spawnY, dir);
+        wave.launch(spawnX, spawnY, dir, character.attackExtraPower);
         playSlam();
       }
     };

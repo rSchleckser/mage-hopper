@@ -31,3 +31,10 @@ export function setSelectedCharacterId(id) {
 export function livesForSelectedCharacter() {
   return getCharacter(selectedId).startingLives;
 }
+
+// Max HP for whichever character is currently selected — used the same way
+// as livesForSelectedCharacter(), resetting `gameState.hp` at every point a
+// life/run restarts.
+export function maxHpForSelectedCharacter() {
+  return getCharacter(selectedId).maxHp;
+}

@@ -4,7 +4,7 @@ import { hideInstructionsDomUi } from '../../ui/instructions-overlay.js';
 import { makePillButton } from '../../ui/menu-widgets.js';
 import { gameState } from '../../game-state.js';
 import { applyFacingHitbox } from '../../utils/hitbox.js';
-import { ENEMY_BASE_SPEED } from '../../constants.js';
+import { ENEMY_BASE_SPEED, ENEMY_HP } from '../../constants.js';
 import { getCharacter, frameFileIndices } from '../../characters.js';
 import { getSelectedCharacterId } from '../../character-select.js';
 import { ProjectileGroup } from '../../entities/projectile.js';
@@ -17,7 +17,7 @@ import {
   hitEnemyWithSlamWave,
   slamWaveCanHit,
   createEnemyCanHurtPlayer,
-  playerDies,
+  damagePlayer,
   collectKey,
   enterDoor,
 } from './combat.js';
@@ -108,9 +108,21 @@ export const gameScene = {
 
     const levelConfig = getLevelConfig(gameState.level);
 
+    // Every fresh Game scene start begins at full HP — this covers the very
+    // first play session (before any reset site has run) and also means
+    // Pause's "Restart Level" (the one entry point that starts Game directly,
+    // without going through a scene that resets gameState.hp) correctly
+    // grants a clean attempt, same as lives being untouched but enemies being
+    // fully respawned on restart.
+    gameState.hp = this.character.maxHp;
+
     // HUD
     this.levelIndicator = this.add.text(16, 16, `Level: ${gameState.level}`, { fontSize: '32px', fill: '#000' });
     this.lifeIndicator = this.add.text(1700, 16, `Lives: ${gameState.lives}`, { fontSize: '32px', fill: 'blue' });
+    this.hpIndicator = this.add.text(1700, 50, `HP: ${gameState.hp}/${this.character.maxHp}`, {
+      fontSize: '28px',
+      fill: 'blue',
+    });
     this.playerSpeedIndicator = this.add.text(500, 16, `Player Speed: ${this.character.moveSpeed}`, {
       fontSize: '32px',
       fill: 'green',
@@ -145,6 +157,7 @@ export const gameScene = {
       const enemy = this.physics.add.sprite(spawn.x, spawn.y, 'enemy').setScale(1.5);
       enemy.setCollideWorldBounds(true);
       applyFacingHitbox(enemy, false);
+      enemy.setData('hp', ENEMY_HP);
       return enemy;
     });
 
@@ -157,8 +170,8 @@ export const gameScene = {
       this.physics.add.collider(enemy, this.platforms);
       this.physics.add.overlap(this.fireballs, enemy, hitEnemyWithFire, null, this);
       this.physics.add.overlap(this.slamWaves, enemy, hitEnemyWithSlamWave, slamWaveCanHit, this);
-      // Player dies and respawns on contact, unless mid-attack
-      this.physics.add.collider(this.player, enemy, playerDies, enemyCanHurtPlayer, this);
+      // Player takes damage and respawns on contact, unless mid-attack
+      this.physics.add.collider(this.player, enemy, damagePlayer, enemyCanHurtPlayer, this);
     });
 
     this.physics.add.collider(this.player, this.platforms);

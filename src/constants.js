@@ -6,6 +6,12 @@ export const ENEMY_JUMP_VELOCITY = -350;
 export const ENEMY_JUMP_DELAY_MS = 650;
 export const INVULNERABILITY_MS = 1800;
 
+// Combat stats: hit points and per-hit power, replacing the old
+// touch-equals-instant-kill model on both sides.
+export const ENEMY_HP = 2;
+export const ENEMY_CONTACT_DAMAGE = 1;
+export const ENEMY_HIT_FLASH_MS = 120;
+
 // Melee reach (Rogue): a rectangle extending in front of the player, swept
 // against enemies on attack release.
 export const MELEE_REACH = 90;

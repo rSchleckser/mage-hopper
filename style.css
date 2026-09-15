@@ -1037,13 +1037,22 @@ body {
   margin: 0;
   font-family: Cinzel, serif;
   font-weight: 900;
-  font-size: clamp(1.7rem, 8vw, 2.4rem);
+  font-size: clamp(1.9rem, 8vw, 2.4rem);
   line-height: 1.05;
   text-transform: uppercase;
   letter-spacing: 0.01em;
   color: #fff8e7;
-  -webkit-text-stroke: 1.5px #1a2424;
-  text-shadow: 0 3px 0 #1f6e6e, 0 2px 8px rgba(0, 0, 0, 0.3);
+  /* A 4-direction text-shadow outline instead of -webkit-text-stroke: the
+     stroke property draws on top of these already-bold (900) glyphs and can
+     nearly close up narrow counters (A/O/P/R) at small mobile sizes, making
+     the title look like solid blobs on some phones. This renders a crisp,
+     consistent outline across browsers/devices. */
+  text-shadow:
+    -1.5px -1.5px 0 #1a2424,
+    1.5px -1.5px 0 #1a2424,
+    -1.5px 1.5px 0 #1a2424,
+    1.5px 1.5px 0 #1a2424,
+    0 2px 3px rgba(31, 110, 110, 0.7);
 }
 #mainmenu-dom-ui .mainmenu-ribbon {
   padding: 8px 20px;

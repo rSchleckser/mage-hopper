@@ -233,36 +233,57 @@ export function damagePlayer(player, enemyHit) {
   if (!dying) {
     this.playerState = 'hurt';
     player.anims.play('hurt', true);
-    player.once('animationcomplete-hurt', () => {
-      // Re-enable in place — no teleport. The hurt animation itself is the
-      // damage indicator now (paired with the HP HUD ticking down), not a
-      // random respawn across the level.
-      player.enableBody(true, player.x, player.y, true, true);
-      player.setBounce(0.1);
-      player.setCollideWorldBounds(true);
-      applyFacingHitbox(player, player.flipX);
-      this.playerState = 'idle';
-    });
-    // Brief flicker for the remaining invulnerability window — a lighter,
-    // untethered replacement for the old teleport-then-fade cue. The final
-    // reset fires one full flicker interval after the last possible toggle
-    // so it always wins the tie instead of racing it.
-    const FLICKER_INTERVAL_MS = 120;
-    const flickerEvent = this.time.addEvent({
-      delay: FLICKER_INTERVAL_MS,
-      repeat: Math.max(Math.floor(INVULNERABILITY_MS / FLICKER_INTERVAL_MS) - 1, 0),
-      callback: () => {
+
+    if (losingLife) {
+      // Lost a life (but have more left): restore the original respawn —
+      // a random position across the level, fading back in from half
+      // transparent — as the clear "you lost a life" beat. A hit that
+      // merely chips HP (no life lost) stays in place instead, below.
+      player.once('animationcomplete-hurt', () => {
+        player.enableBody(true, Math.floor(Math.random() * 1700), 800, true, true);
+        player.setBounce(0.1);
+        player.setCollideWorldBounds(true);
+        player.setAlpha(0.5);
+        applyFacingHitbox(player, false);
+        this.playerState = 'idle';
+        this.time.delayedCall(1500, () => {
+          if (player && player.active) {
+            player.setAlpha(1);
+          }
+        });
+      });
+    } else {
+      player.once('animationcomplete-hurt', () => {
+        // Re-enable in place — no teleport. The hurt animation itself is the
+        // damage indicator (paired with the HP HUD ticking down), not a
+        // random respawn across the level.
+        player.enableBody(true, player.x, player.y, true, true);
+        player.setBounce(0.1);
+        player.setCollideWorldBounds(true);
+        applyFacingHitbox(player, player.flipX);
+        this.playerState = 'idle';
+      });
+      // Brief flicker for the remaining invulnerability window — a lighter,
+      // untethered replacement for the old teleport-then-fade cue. The final
+      // reset fires one full flicker interval after the last possible toggle
+      // so it always wins the tie instead of racing it.
+      const FLICKER_INTERVAL_MS = 120;
+      const flickerEvent = this.time.addEvent({
+        delay: FLICKER_INTERVAL_MS,
+        repeat: Math.max(Math.floor(INVULNERABILITY_MS / FLICKER_INTERVAL_MS) - 1, 0),
+        callback: () => {
+          if (player && player.active) {
+            player.setAlpha(player.alpha === 1 ? 0.4 : 1);
+          }
+        },
+      });
+      this.time.delayedCall(INVULNERABILITY_MS + FLICKER_INTERVAL_MS, () => {
+        flickerEvent.remove();
         if (player && player.active) {
-          player.setAlpha(player.alpha === 1 ? 0.4 : 1);
+          player.setAlpha(1);
         }
-      },
-    });
-    this.time.delayedCall(INVULNERABILITY_MS + FLICKER_INTERVAL_MS, () => {
-      flickerEvent.remove();
-      if (player && player.active) {
-        player.setAlpha(1);
-      }
-    });
+      });
+    }
   } else {
     this.playerState = 'dying';
     setMobileControlsVisible(false);

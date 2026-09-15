@@ -74,6 +74,7 @@ function loadCharacterFrames(scene, character) {
   reloadImage(scene, 'player', `./${character.folder}/${character.baseFile}`);
   loadCharacterAnim(scene, character.folder, 'run', character.anims.run);
   loadCharacterAnim(scene, character.folder, 'jump', character.anims.jump);
+  loadCharacterAnim(scene, character.folder, 'highJump', character.anims.highJump);
   loadCharacterAnim(scene, character.folder, 'attack', character.anims.attack);
   loadCharacterAnim(scene, character.folder, 'death', character.anims.death);
   loadCharacterAnim(scene, character.folder, 'hurt', character.anims.hurt);
@@ -214,6 +215,8 @@ export const gameScene = {
     this.invulnerableUntil = 0;
     this.playerState = 'idle';
     this.airAttackUsed = false;
+    this.doubleJumpUsed = false;
+    this.jumpKeyWasDown = false;
 
     createAnimations(this, this.character);
 

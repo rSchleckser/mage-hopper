@@ -23,6 +23,7 @@ export const CHARACTERS = {
       idle: { dir: 'Idle', prefix: 'idle', start: 1, count: 14 },
       run: { dir: 'Run', prefix: 'run', start: 1, count: 8 },
       jump: { dir: 'Jump', prefix: 'jump', start: 1, count: 7 },
+      highJump: { dir: 'High_Jump', prefix: 'high_jump', start: 1, count: 12 },
       attack: { dir: 'Attack', prefix: 'attack', start: 1, count: 7 },
       death: { dir: 'Death', prefix: 'death', start: 1, count: 10 },
       hurt: { dir: 'Hurt', prefix: 'hurt', start: 1, count: 4 },
@@ -48,6 +49,7 @@ export const CHARACTERS = {
       idle: { dir: 'Idle', prefix: 'idle', indices: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14, 15, 16, 17, 18] },
       run: { dir: 'Run', prefix: 'run', start: 1, count: 8 },
       jump: { dir: 'Jump', prefix: 'jump', start: 1, count: 7 },
+      highJump: { dir: 'High_Jump', prefix: 'high_jump', start: 1, count: 12 },
       attack: { dir: 'Attack', prefix: 'Attack', start: 1, count: 7 },
       death: { dir: 'Death', prefix: 'death', start: 1, count: 10 },
       hurt: { dir: 'Hurt', prefix: 'hurt', start: 1, count: 4 },
@@ -74,6 +76,7 @@ export const CHARACTERS = {
       idle: { dir: 'Idle', prefix: 'idle', start: 1, count: 12 },
       run: { dir: 'Run', prefix: 'run', start: 1, count: 8 },
       jump: { dir: 'Jump', prefix: 'jump', start: 1, count: 7 },
+      highJump: { dir: 'High_Jump', prefix: 'high_jump', start: 1, count: 12 },
       // Attack frames are 0-indexed here, unlike Mage/Rogue's Attack folders.
       attack: { dir: 'Attack', prefix: 'attack', start: 0, count: 5 },
       death: { dir: 'Death', prefix: 'death', start: 1, count: 10 },

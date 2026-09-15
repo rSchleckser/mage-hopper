@@ -79,8 +79,14 @@ function handleJumpingState(scene, input) {
     player.setVelocityY(PLAYER_JUMP_VELOCITY);
     player.anims.play('jump', true);
     playJump();
-    // A fresh jump grants a new air attack, independent of the last one.
+    // A fresh jump grants a new air attack and double jump, independent of the last one.
     scene.airAttackUsed = false;
+    scene.doubleJumpUsed = false;
+  } else if (input.upJustPressed && !player.body.touching.down && !scene.doubleJumpUsed) {
+    player.setVelocityY(PLAYER_JUMP_VELOCITY);
+    player.anims.play('doubleJump', true);
+    playJump();
+    scene.doubleJumpUsed = true;
   }
 
   if (input.left) {
@@ -108,6 +114,13 @@ function handleJumpingState(scene, input) {
 
 function handleFallingState(scene, input) {
   const { player } = scene;
+  if (input.upJustPressed && !player.body.touching.down && !scene.doubleJumpUsed) {
+    player.setVelocityY(PLAYER_JUMP_VELOCITY);
+    player.anims.play('doubleJump', true);
+    playJump();
+    scene.doubleJumpUsed = true;
+  }
+
   if (!player.body.touching.down && player.body.velocity.y > 0) {
     player.anims.play('fall', true);
     if (!player.body.touching.down) {
@@ -248,6 +261,11 @@ function handleStateTransitions(scene) {
 
 export function updatePlayer(scene) {
   const input = readInput(scene);
+  // Held-down state alone can't drive a double jump — holding the original
+  // jump key through the whole airborne arc would auto-trigger it. Track the
+  // edge so a double jump needs a genuine release-then-press.
+  input.upJustPressed = input.up && !scene.jumpKeyWasDown;
+  scene.jumpKeyWasDown = input.up;
 
   switch (scene.playerState) {
     case 'idle':

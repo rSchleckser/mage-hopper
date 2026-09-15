@@ -181,8 +181,15 @@ export function updateMovingPlatforms(group) {
       else platform.setVelocityY(velocity);
     } else if (cfg.mode === 'loop') {
       if (pos > cfg.to) {
-        if (cfg.axis === 'x') platform.body.reset(cfg.from, cfg.y);
-        else platform.body.reset(cfg.x, cfg.from);
+        // Body.reset() also stops the body (zeroing velocity), so it must be
+        // re-applied here or the platform freezes in place after its first lap.
+        if (cfg.axis === 'x') {
+          platform.body.reset(cfg.from, cfg.y);
+          platform.setVelocityX(cfg.speed);
+        } else {
+          platform.body.reset(cfg.x, cfg.from);
+          platform.setVelocityY(cfg.speed);
+        }
       }
     }
   });

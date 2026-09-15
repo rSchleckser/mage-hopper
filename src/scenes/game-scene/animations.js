@@ -20,6 +20,7 @@ export function createAnimations(scene, character) {
 
   const runFrames = framesFor('run', character.anims.run.count);
   const jumpAllFrames = framesFor('jump', character.anims.jump.count);
+  const highJumpFrames = framesFor('highJump', character.anims.highJump.count);
   const attackFrames = framesFor('attack', character.anims.attack.count);
   const deathFrames = framesFor('death', character.anims.death.count);
   const hurtFrames = framesFor('hurt', character.anims.hurt.count);
@@ -75,6 +76,9 @@ export function createAnimations(scene, character) {
   defineAnim(scene, { key: 'fall', frames: fallFrames, frameRate: 10, repeat: 0 });
   defineAnim(scene, { key: 'lastFallFrame', frames: lastFallFrame, frameRate: 1, repeat: 0 });
   defineAnim(scene, { key: 'landing', frames: landing, frameRate: 1, repeat: 0 });
+
+  // Double jump (player only) — played as one whole clip, not sliced like Jump.
+  defineAnim(scene, { key: 'doubleJump', frames: highJumpFrames, frameRate: 10, repeat: 0 });
 
   // Combat
   defineAnim(scene, { key: 'attack', frames: attackFrames, frameRate: 10, repeat: 0 });
